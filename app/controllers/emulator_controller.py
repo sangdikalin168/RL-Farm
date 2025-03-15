@@ -1,11 +1,17 @@
+import json
 import os
+import random
 import subprocess
 import sys
 import re
-sys.stdout.reconfigure(encoding="utf-8")
-from concurrent.futures import ThreadPoolExecutor
+from tkinter import messagebox
 
-ADB_PATH = os.path.join(os.getcwd(), "adb", "adb.exe")
+# Fix for PyInstaller EXE: Ensure stdout and stderr are always available
+if getattr(sys, 'frozen', False):  # Running as EXE
+    sys.stdout = open(os.devnull, 'w')
+    sys.stderr = open(os.devnull, 'w')
+
+from concurrent.futures import ThreadPoolExecutor
 
 class MuMuPlayerController:
     """Controller for managing MuMuPlayer emulator actions."""
@@ -13,9 +19,23 @@ class MuMuPlayerController:
     def __init__(self,view):
         self.view = view  # ✅ Reference to MainWindow (or EmulatorView)
         # ✅ Define MuMuPlayer executable path
-        self.mumu_path = r"D:\MuMuPlayerGlobal-12.0\shell"
-        self.mumu_manager_path = os.path.join(self.mumu_path, "MuMuManager.exe")
-        self.adb_port = "127.0.0.1:16416"  # ✅ Default ADB port for the first emulator  # Example: "127.0.0.1:16384"
+        self.mumu_path = self.find_mumu_path()
+        self.vms_path = os.path.join(self.mumu_path, "vms")
+        self.mumu_manager_path = os.path.join(self.mumu_path, "shell", "MuMuManager.exe")
+        self.adb_path = os.path.join(os.getcwd(), "adb", "adb.exe")
+        self.device_id = "127.0.0.1:16416"  # ✅ Default ADB port for the first emulator  # Example: "127.0.0.1:16384"
+
+    def find_mumu_path(self):
+        """Find MuMuPlayer installation path dynamically."""
+        possible_paths = [
+            r"C:\\Program Files\\Netease\\MuMuPlayerGlobal-12.0",
+            r"D:\\Program Files\\Netease\\MuMuPlayerGlobal-12.0"
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+        messagebox.showerror("Error", "MuMuPlayer installation not found!")
+        # sys.exit("❌ MuMuPlayer installation not found!")
 
     def run_command(self, command):
         """Execute a command and return its output as a string."""
@@ -82,36 +102,36 @@ class MuMuPlayerController:
             # ✅ Ensure index is an integer before proceeding
             if not isinstance(index, int):
                 print(f"❌ Invalid Emulator Index: {index} (Skipping)")
-                return {"adb_port": None, "status": "Unknown"}
+                return {"device_id": None, "status": "Unknown"}
 
             # ✅ Check if emulator is running
             status_result = self.run_command([self.mumu_manager_path, "api", "-v", str(index), "player_state"])
 
             if not status_result:
                 print(f"❌ Error: Empty response for player {index}")
-                return {"adb_port": None, "status": "Unknown"}
+                return {"device_id": None, "status": "Unknown"}
 
             if "state=start_finished" in status_result:
                 status = "Running"
             elif "player not running" in status_result or "result=-2" in status_result:
-                return {"adb_port": None, "status": "Not Running"}
+                return {"device_id": None, "status": "Not Running"}
 
             # ✅ Only get ADB port if emulator is running
             adb_result = self.run_command([self.mumu_manager_path, "adb", "-v", str(index)])
 
             if not adb_result:
                 print(f"❌ Error: Empty ADB response for player {index}")
-                return {"adb_port": None, "status": "Not Running"}
+                return {"device_id": None, "status": "Not Running"}
 
             if "not running" in adb_result:
-                return {"adb_port": None, "status": "Not Running"}
+                return {"device_id": None, "status": "Not Running"}
 
-            adb_port = adb_result.strip()
-            return {"adb_port": adb_port, "status": status}
+            device_id = adb_result.strip()
+            return {"device_id": device_id, "status": status}
 
         except Exception as e:
             print(f"❌ Exception in get_emulator_status({index}): {str(e)}")
-            return {"adb_port": None, "status": f"Error: {str(e)}"}
+            return {"device_id": None, "status": f"Error: {str(e)}"}
 
     def get_all_emulator_status(self):
         """Optimized: Only connect ADB for running players."""
@@ -132,8 +152,8 @@ class MuMuPlayerController:
         # ✅ Step 3: Process ADB Port Results
         for player, process in adb_processes.items():
             stdout, stderr = process.communicate()
-            adb_port = stdout.strip() if "127.0.0.1" in stdout else None  # ✅ Extract port only if valid
-            emulator_data[player] = {"adb_port": adb_port, "status": "Unknown"}
+            device_id = stdout.strip() if "127.0.0.1" in stdout else None  # ✅ Extract port only if valid
+            emulator_data[player] = {"device_id": device_id, "status": "Unknown"}
 
         # ✅ Step 4: Fetch Player State (Check if Running)
         state_processes = {}
@@ -213,7 +233,6 @@ class MuMuPlayerController:
 
     def arrange_windows(self):
         GRID_COLS = 10
-        GRID_ROWS = 2
         WINDOW_WIDTH = 220
         WINDOW_HEIGHT = 425
         WINDOW_GAP = 0  # Gap between windows
@@ -262,7 +281,7 @@ class MuMuPlayerController:
     def run_adb_command(self, command, as_root=False):
         """Run an ADB command with optional root privileges."""
         try:
-            full_command = [ADB_PATH, "-s", self.adb_port, "shell"]
+            full_command = [self.adb_path, "-s", self.device_id, "shell"]
             if as_root:
                 full_command += ["su", "-c"]  # Run with root
             full_command += command  # Append the actual ADB command
@@ -275,58 +294,111 @@ class MuMuPlayerController:
 
     def clear_facebook_data(self):
         """🔥 Fully clear Facebook data and spoof device identity with proper root access."""
-        print(f"🔥 Clearing Facebook data on {self.adb_port}...")
+        print(f"🔥 Clearing Facebook data on {self.device_id}...")
 
         # ✅ Step 1: Ensure ADB root mode is enabled
-        adb_root_status = self.run_adb_command(["adb", "-s", self.adb_port, "shell", "whoami"])
+        adb_root_status = self.run_adb_command(["adb", "-s", self.device_id, "shell", "whoami"])
         if adb_root_status != "root":
             print("⚠️ Warning: Emulator may not have full root access. Trying alternative methods.")
 
         # ✅ Step 2: Force Stop & Remove Facebook Data
         print("🛑 Force stopping Facebook...")
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "am", "force-stop", "com.facebook.katana"])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "am", "force-stop", "com.facebook.katana"])
 
         print("🧹 Clearing Facebook app data...")
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "pm", "clear", "com.facebook.katana"])  # Normal clear
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "pm", "clear", "com.facebook.katana"])  # Normal clear
 
         if adb_root_status == "root":
-            self.run_adb_command(["adb", "-s", self.adb_port, "shell", "rm", "-rf", "/data/data/com.facebook.katana"], as_root=True)
-            self.run_adb_command(["adb", "-s", self.adb_port, "shell", "rm", "-rf", "/sdcard/Android/data/com.facebook.katana"], as_root=True)
+            self.run_adb_command(["adb", "-s", self.device_id, "shell", "rm", "-rf", "/data/data/com.facebook.katana"], as_root=True)
+            self.run_adb_command(["adb", "-s", self.device_id, "shell", "rm", "-rf", "/sdcard/Android/data/com.facebook.katana"], as_root=True)
 
         # ✅ Step 3: Spoof Device Identity (Fixed Argument Error)
         print("🔄 Changing device identity...")
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "settings", "put", "global", "device_name", "\"Samsung Galaxy S23\""])
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "settings", "put", "global", "model", "\"SM-S911B\""])
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "settings", "put", "global", "manufacturer", "\"samsung\""])
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "settings", "put", "global", "brand", "\"samsung\""])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "settings", "put", "global", "device_name", "\"Samsung Galaxy S23\""])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "settings", "put", "global", "model", "\"SM-S911B\""])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "settings", "put", "global", "manufacturer", "\"samsung\""])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "settings", "put", "global", "brand", "\"samsung\""])
 
         if adb_root_status == "root":
-            self.run_adb_command(["adb", "-s", self.adb_port, "shell", "settings", "put", "secure", "android_id", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
+            self.run_adb_command(["adb", "-s", self.device_id, "shell", "settings", "put", "secure", "android_id", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
 
         # ✅ Step 4: Reset Google Advertising ID (GAID)
         print("🔄 Resetting Advertising ID...")
         if adb_root_status == "root":
-            self.run_adb_command(["adb", "-s", self.adb_port, "shell", "rm", "-rf", "/data/data/com.google.android.gms/shared_prefs/adid_settings.xml"], as_root=True)
+            self.run_adb_command(["adb", "-s", self.device_id, "shell", "rm", "-rf", "/data/data/com.google.android.gms/shared_prefs/adid_settings.xml"], as_root=True)
         
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "am", "broadcast", "-a", "com.google.android.gms.INITIALIZE"])
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "settings", "put", "secure", "adb_enabled", "0"])
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "settings", "put", "secure", "adb_enabled", "1"])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "am", "broadcast", "-a", "com.google.android.gms.INITIALIZE"])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "settings", "put", "secure", "adb_enabled", "0"])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "settings", "put", "secure", "adb_enabled", "1"])
 
         # ✅ Step 5: Spoof Network Identifiers (IMEI, MAC, Hostname) - Using Root Only If Available
         print("🔄 Spoofing network identifiers...")
         if adb_root_status == "root":
-            self.run_adb_command(["adb", "-s", self.adb_port, "shell", "setprop", "ro.serialno", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
-            self.run_adb_command(["adb", "-s", self.adb_port, "shell", "setprop", "net.hostname", "android-$(date +%s%N | md5sum | cut -c 1-8)"], as_root=True)
-            self.run_adb_command(["adb", "-s", self.adb_port, "shell", "setprop", "ro.boot.wifimac", "$(cat /sys/class/net/wlan0/address | sed 's/://g')"], as_root=True)
-            self.run_adb_command(["adb", "-s", self.adb_port, "shell", "setprop", "ro.boot.btmacaddr", "$(cat /sys/class/net/bt0/address | sed 's/://g')"], as_root=True)
+            self.run_adb_command(["adb", "-s", self.device_id, "shell", "setprop", "ro.serialno", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
+            self.run_adb_command(["adb", "-s", self.device_id, "shell", "setprop", "net.hostname", "android-$(date +%s%N | md5sum | cut -c 1-8)"], as_root=True)
+            self.run_adb_command(["adb", "-s", self.device_id, "shell", "setprop", "ro.boot.wifimac", "$(cat /sys/class/net/wlan0/address | sed 's/://g')"], as_root=True)
+            self.run_adb_command(["adb", "-s", self.device_id, "shell", "setprop", "ro.boot.btmacaddr", "$(cat /sys/class/net/bt0/address | sed 's/://g')"], as_root=True)
         else:
             print("⚠️ Warning: Root commands skipped due to missing `su`.")
 
         # ✅ Step 6: Restart Facebook Instead of Emulator
         print("🔄 Restarting Facebook services...")
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "am", "force-stop", "com.facebook.katana"])
-        self.run_adb_command(["adb", "-s", self.adb_port, "shell", "am", "start", "-n", "com.facebook.katana/.LoginActivity"])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "am", "force-stop", "com.facebook.katana"])
+        self.run_adb_command(["adb", "-s", self.device_id, "shell", "am", "start", "-n", "com.facebook.katana/.LoginActivity"])
 
         print("✅ Facebook data cleared, identity spoofed, and app restarted successfully!")
 
+    def find_vm_config_files(self,vms_path):
+        """Find all vm_config.json files inside dynamically detected emulator folders."""
+        config_files = []
+        for folder in os.listdir(vms_path):
+            folder_path = os.path.join(vms_path, folder, 'configs')
+            config_file = os.path.join(folder_path, 'vm_config.json')
+            if os.path.exists(config_file):
+                config_files.append(config_file)
+        return config_files
 
+    def generate_random_imei(self):
+        """Generate a random valid IMEI number using the Luhn algorithm."""
+        imei_base = [random.randint(0, 9) for _ in range(14)]
+        
+        # Luhn algorithm checksum calculation
+        checksum = 0
+        for i, digit in enumerate(imei_base[::-1]):
+            if i % 2 == 0:
+                doubled = digit * 2
+                checksum += doubled if doubled < 10 else doubled - 9
+            else:
+                checksum += digit
+        
+        imei_base.append((10 - (checksum % 10)) % 10)
+        return "".join(map(str, imei_base))
+    
+    def change_imei(self):
+        """Generate a new unique IMEI for each emulator and update their vm_config.json files."""
+        config_files = self.find_vm_config_files(self.vms_path)
+        
+        if not config_files:
+            messagebox.showerror("Error", "No emulator configurations found!")
+            return
+        
+        imei_list = set()
+        for file in config_files:
+            new_imei = self.generate_random_imei()
+            while new_imei in imei_list:  # Ensure each emulator gets a unique IMEI
+                new_imei = self.generate_random_imei()
+            imei_list.add(new_imei)
+            
+            try:
+                with open(file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                
+                if 'vm' in config and 'phone' in config['vm']:
+                    config['vm']['phone']['imei'] = new_imei
+                    
+                    with open(file, 'w', encoding='utf-8') as f:
+                        json.dump(config, f, indent=2)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to update {file}: {str(e)}")
+                return
+        messagebox.showinfo("Success", "IMEI updated successfully for all emulators! Restart MuMuPlayer to apply changes.")

@@ -8,8 +8,7 @@ from app.controllers.emulator_controller import MuMuPlayerController
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import ttkbootstrap as ttkb
-from ttkbootstrap import Combobox
-from tkinter import messagebox,StringVar,filedialog
+from tkinter import messagebox
 from PIL import Image, ImageTk
 import os
 from app.services.mysql_service import MySQLService
@@ -17,7 +16,7 @@ from app.controllers.emulator_controller import MuMuPlayerController
 from concurrent.futures import ThreadPoolExecutor
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+import tkinter as tk
 from app.utils.user_generator import generate_info
 
 class EmulatorView:
@@ -25,13 +24,17 @@ class EmulatorView:
         self.master = master
         self.emulator = MuMuPlayerController(self)  # ✅ Pass `self` (MainWindow) as a reference to EmulatorController
         self.selected_emulators = {}
+        self.selected_package = tk.StringVar(value="com.facebook.katana")
 
         # ✅ Setup Emulator UI
         self.setup_emulator_ui()
 
     def setup_emulator_ui(self):
         """Setup the Emulator UI Components"""
-            # ✅ Frame for Emulator Treeview
+        
+        ICON_SIZE = (25, 25)  # Define constant for image resizing
+
+        # ✅ Frame for Emulator Treeview
         emulator_frame = ttkb.Frame(self.master, padding=5)
         emulator_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
@@ -45,80 +48,61 @@ class EmulatorView:
         button_frame = ttkb.Frame(emulator_frame)
         button_frame.grid(row=0, column=0, padx=0, pady=10, sticky="w")
 
-        # ✅ Button Size for Start/Stop Icons
-        button_size = (25, 25)
-        
-        # ✅ Load Start/Stop Icons
-        try:
-            self.start_photo = ImageTk.PhotoImage(Image.open(os.path.join("assets", "start_icon.png")).resize(button_size, Image.Resampling.LANCZOS))
-            self.stop_photo = ImageTk.PhotoImage(Image.open(os.path.join("assets", "stop_icon.png")).resize(button_size, Image.Resampling.LANCZOS))
-        except FileNotFoundError:
-            messagebox.showerror("Error", "Start/Stop icon file not found.")
+        # ✅ Function to Load Icons
+        def load_icon(filename):
+            try:
+                return ImageTk.PhotoImage(Image.open(os.path.join("assets", filename)).resize(ICON_SIZE, Image.Resampling.LANCZOS))
+            except FileNotFoundError:
+                print(f"Warning: {filename} not found.")
+                return None
 
-        # ✅ Start Button (Only starts non-running emulators)
-        start_button = ttkb.Button(
-            button_frame,
-            image=self.start_photo,
-            command=self.start_selected_players,
-            style="success.Compact.TButton",
-            width=20,
-            padding=2
-        )
-        start_button.pack(side="left", padx=0, pady=0)
+        # ✅ Load Icons
+        self.start_photo = load_icon("start_icon.png")
+        self.stop_photo = load_icon("stop_icon.png")
+        self.sort_photo = load_icon("sort_icon.png")
 
-        # ✅ Stop Button (Only stops running emulators)
-        stop_button = ttkb.Button(
-            button_frame,
-            image=self.stop_photo,
-            command=self.stop_selected_players,
-            style="danger.Compact.TButton",
-            width=20,
-            padding=2
-        )
-        stop_button.pack(side="left", padx=5, pady=0)
+        # ✅ Start & Stop Buttons
+        if self.start_photo:
+            start_button = ttkb.Button(button_frame, image=self.start_photo, command=self.start_selected_players, style="success.Compact.TButton", width=20, padding=2)
+            start_button.grid(row=0, column=0, padx=5)
 
-        # ✅ Load Sort Icon
-        try:
-            sort_image_path = os.path.join("assets", "sort_icon.png")  # Replace with actual image path
-            sort_image = Image.open(sort_image_path).resize((25, 25), Image.Resampling.LANCZOS)
-            self.sort_photo = ImageTk.PhotoImage(sort_image)
-        except FileNotFoundError:
-            messagebox.showerror("Error", "Sort icon file not found.")
+        if self.stop_photo:
+            stop_button = ttkb.Button(button_frame, image=self.stop_photo, command=self.stop_selected_players, style="danger.Compact.TButton", width=20, padding=2)
+            stop_button.grid(row=0, column=1, padx=5)
 
-        # ✅ Sort Button (Arranges Emulator Windows)
-        sort_button = ttkb.Button(
-            button_frame,
-            image=self.sort_photo,
-            command=self.sort_emulators,
-            style="info.Compact.TButton",
-            width=20,
-            padding=2
-        )
-        sort_button.pack(side="left", padx=5, pady=0)
+        if self.sort_photo:
+            sort_button = ttkb.Button(button_frame, image=self.sort_photo, command=self.sort_emulators, style="info.Compact.TButton", width=20, padding=2)
+            sort_button.grid(row=0, column=2, padx=5)
 
+        # ✅ Start Register Button (Moved to the same row as Change IMEI)
+        self.start_register_button = ttkb.Button(button_frame, text="Start Register", command=self.start_register_action, style="success.TButton")
+        self.start_register_button.grid(row=0, column=3, padx=5)
 
-        # ✅ Start Register Button
-        self.start_register_button = ttkb.Button(
-            button_frame, 
-            text="Start Register", 
-            command=self.start_register_action, 
-            style="success.TButton"
-        )
-        self.start_register_button.pack(side="left", padx=5)
+        # ✅ Load Emulator & Change IMEI Buttons
+        self.load_emulator_button = ttkb.Button(button_frame, text="Load Emulator", command=self.load_players, style="success.TButton")
+        self.load_emulator_button.grid(row=0, column=4, padx=5)
 
+        self.change_imei_button = ttkb.Button(button_frame, text="Change IMEI", command=self.emulator.change_imei, style="success.TButton")
+        self.change_imei_button.grid(row=0, column=5, padx=5)
 
-        # ✅ Select All Button (Toggles between Select/Unselect)
-        self.select_all_button = ttkb.Button(
-            emulator_frame, 
-            text="Select All", 
-            command=self.toggle_select_all, 
-            style="primary.TButton"
-        )
+        # ✅ Frame for Mode Selection Checkboxes with Border
+        register_frame = ttkb.Labelframe(button_frame, text="Mode Selection", padding=5)
+        register_frame.grid(row=1, column=0, columnspan=6, pady=(5, 0), sticky="w")
+
+        # ✅ Lite Checkbox
+        self.lite_checkbox = ttkb.Radiobutton(register_frame, text="Lite", variable=self.selected_package, value="com.facebook.lite", style="primary.TRadiobutton")
+        self.lite_checkbox.grid(row=0, column=0, sticky="w", padx=5)
+
+        # ✅ Katana Checkbox
+        self.katana_checkbox = ttkb.Radiobutton(register_frame, text="Katana", variable=self.selected_package, value="com.facebook.katana", style="primary.TRadiobutton")
+        self.katana_checkbox.grid(row=0, column=1, sticky="w", padx=5)
+
+        # ✅ Select All Button
+        self.select_all_button = ttkb.Button(emulator_frame, text="Select All", command=self.toggle_select_all, style="primary.TButton")
         self.select_all_button.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        # ✅ Dictionary to store checkbox states
+        # ✅ Dictionary to Store Checkbox States
         self.selected_emulators = {} 
-
 
         # ✅ Create Emulator TreeView
         self.emulator_tree = ttkb.Treeview(
@@ -135,27 +119,27 @@ class EmulatorView:
         self.emulator_tree.heading("Status", text="Status", anchor="center")
 
         # ✅ Set Column Widths & Enable Resizing
-        self.emulator_tree.column("Select", width=5, minwidth=5, stretch=True, anchor="center")
-        self.emulator_tree.column("No", width=5, minwidth=5, stretch=True, anchor="center")
+        self.emulator_tree.column("Select", width=30, minwidth=30, stretch=False, anchor="center")
+        self.emulator_tree.column("No", width=30, minwidth=30, stretch=False, anchor="center")
         self.emulator_tree.column("Device", width=70, minwidth=70, stretch=True, anchor="center")
         self.emulator_tree.column("Status", width=120, minwidth=120, stretch=True, anchor="center")
 
         # ✅ Place TreeView inside the grid
-        self.emulator_tree.grid(row=1, column=0, columnspan=5, sticky="nsew")
+        self.emulator_tree.grid(row=1, column=0, columnspan=4, sticky="nsew")
 
         # ✅ Ensure Parent Frame Expands with the Window
         emulator_frame.grid_rowconfigure(1, weight=1)
         emulator_frame.grid_columnconfigure(0, weight=1)
-        self.master.grid_rowconfigure(0, weight=1)
-        self.master.grid_columnconfigure(0, weight=1)
 
         # ✅ Add Scrollbar to TreeView
         emulator_scrollbar = ttkb.Scrollbar(emulator_frame, orient="vertical", command=self.emulator_tree.yview)
         self.emulator_tree.configure(yscrollcommand=emulator_scrollbar.set)
-        emulator_scrollbar.grid(row=1, column=5, sticky="ns")
+        emulator_scrollbar.grid(row=1, column=4, sticky="ns")  # Adjusted to correct position
 
-        # ✅ Bind checkbox toggle function
+        # ✅ Load players on startup & Bind checkbox toggle function
+        self.load_players()
         self.emulator_tree.bind("<ButtonRelease-1>", self.toggle_checkbox)
+
 
     def load_players(self):
         """Fetch player list and update TreeView efficiently."""
@@ -169,17 +153,12 @@ class EmulatorView:
             return
 
         for idx, (player_index, data) in enumerate(emulator_data.items(), start=1):
-            device_id = data["adb_port"] if data["adb_port"] else "Not Available"
+            device_id = data["device_id"] if data["device_id"] else "Not Available"
             status = data["status"]
 
             # ✅ Insert into TreeView and store the item_id as a key
             item_id = self.emulator_tree.insert("", "end", values=("☐", idx, device_id, status))
             self.selected_emulators[item_id] = False  # ✅ Store item_id as a dictionary key
-
-    def update_emulator_status_loop(self):
-        """Continuously update emulator status in real-time using threading."""
-        thread = threading.Thread(target=self._update_emulator_status, daemon=True)
-        thread.start()
 
     def toggle_checkbox(self, event):
         """Toggle checkbox state when a user clicks on the 'Select' column."""
@@ -313,7 +292,7 @@ class EmulatorView:
 
             # Ensure response is valid
             if not status_info:
-                return item_id, {"status": "Unknown", "adb_port": "Not Available"}
+                return item_id, {"status": "Unknown", "device_id": "Not Available"}
 
             return item_id, status_info
 
@@ -327,12 +306,12 @@ class EmulatorView:
                 values = self.emulator_tree.item(item_id, "values")
                 current_status = values[3]  # Current status in TreeView
                 new_status = status_info.get("status", "Unknown")
-                adb_port = status_info.get("adb_port", "Not Available")
+                device_id = status_info.get("device_id", "Not Available")
 
                 # ✅ Update UI only if status changed (Reduces UI updates)
                 if current_status != new_status:
-                    print(f"🔄 Updating {values[1]}: {adb_port} -> {new_status}")
-                    self.emulator_tree.item(item_id, values=(values[0], values[1], adb_port, new_status))
+                    print(f"🔄 Updating {values[1]}: {device_id} -> {new_status}")
+                    self.emulator_tree.item(item_id, values=(values[0], values[1], device_id, new_status))
 
         self.master.after(100, update_ui)  # ✅ Queue UI updates in the main thread
 
@@ -382,7 +361,7 @@ class EmulatorView:
             threading.Thread(target=register_on_device, args=(device_id,), daemon=True).start()
 
         print("🎉 Registration process started on all devices!")
-      
+
     def stop_registration(self):
         """Stop all ongoing registration tasks."""
         self.running = False
@@ -422,118 +401,143 @@ class EmulatorView:
 
         self.master.after(0, update)  # ✅ Ensures UI updates happen in the main thread
 
-
     def register_facebook_account(self, device_id):
         """Registers a new Facebook account using ADB commands."""
         print(f"📲 Registering Facebook on {device_id}...")
 
-        controller = ADBController(device_id)
-
-        print("🔥 Step 1: Clearing Facebook Data...")
-        self.update_device_status(device_id, "Clearing Facebook data...")
-        controller.clear_facebook_data()
-        print(f"✅ Facebook data cleared on {device_id}")
-
-        print("📲 Step 2: Opening Facebook App...")
-        self.update_device_status(device_id, "Opening Facebook...")
-        controller.open_facebook()
-        print(f"✅ Facebook opened on {device_id}")
+        selected_package = self.selected_package.get()
+        print(f"🔥 Selected Mode: {selected_package}")
         
-        # ✅ Click on "Create New Account" button
-        print("🔍 Step 3: Detecting 'Create New Account' Button...")
-        self.update_device_status(device_id, "Create New Account")
-        controller.tap_img("templates/create_new_account.png", timeout=30)
-        print(f"✅ 'Create New Account' button detected on {device_id}")
-        
-        
-        templates_1 = [
-            "templates/get_started.png",
-            "templates/create_new_acoount_get_started.png",
-            "templates/yes_create_account.png"
-        ]
-        
-
-        # Run detection and tap the first matching template
-        matched_template = controller.tap_multiple_templates(templates_1, timeout=20)
-
-        if matched_template:
-            print(f"🎯 Matched and tapped: {matched_template}")
+        if selected_package == "com.facebook.lite":
+            self.register_lite(device_id,selected_package)
         else:
-            print("❌ No matching template found!")
-            
-        info = generate_info()
-
-        # Unpacking dictionary keys into variables
-        first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = info.values()
-            
-        controller.wait(2)    
-        self.update_device_status(device_id, "Input First Name...")
-        controller.send_text(first_name)
+            self.register_katana(device_id,selected_package)
+        
+    def register_lite(self, device_id, selected_package):
+        em = ADBController(device_id)  # ✅ Initialize ADBController for the device
+        em.open_app(selected_package)  # ✅ Open Facebook Lite app
+        """Registers a new Facebook account using ADB commands."""
+        print(f"📲 Registering Facebook on {device_id}...")
+    
+    def register_katana(self, device_id, selected_package):
+        em = ADBController(device_id)
+        
+        em.clear_facebook_data()
+        
+        em.open_app(selected_package)
+        
+        self.update_device_status(device_id,"Waiting Meta Logo")
+        meta_logo = em.wait_img("templates/katana/meta_logo.png")
+        
+        if( meta_logo == False):
+            self.update_device_status(device_id,"Meta Logo Not Found")
+            em.wait(10)
+            return
+        
+        em.wait(1)
+        self.update_device_status(device_id,"Tap Create Account")
+        em.tap(263.5,854.5)
         
         
-        controller.tap_img("templates/last_name.png", timeout=30)
+        get_started_page = em.wait_img("templates/katana/get_started_page.png")
         
-        self.update_device_status(device_id, "Input Last Name...")
-        controller.send_text(last_name)
+        if(get_started_page == False):
+            self.update_device_status(device_id,"Get Started Page Not Found")
+            em.wait(10)
+            return
         
-        self.update_device_status(device_id, "next...")
-        controller.tap_img("templates/next.png", timeout=30)
+        self.update_device_status(device_id,"Get Started Page Found")
+        em.wait(1)
+        em.tap(268.4,560.3)
         
-        controller.tap_img("templates/set.png", timeout=30)
-            
-        self.update_device_status(device_id, "next...")
-        controller.tap_img("templates/next.png", timeout=30)    
-        
-        self.update_device_status(device_id, "next...")
-        controller.tap_img("templates/next.png", timeout=30)   
-        
-        controller.wait(3)
-        self.update_device_status(device_id, "Input Age...")
-        controller.send_text("28")    
-        
-        self.update_device_status(device_id, "next...")
-        controller.tap_img("templates/next.png", timeout=30)  
-            
-        self.update_device_status(device_id, "next...")
-        controller.tap_img("templates/ok_birthday.png", timeout=30)  
-        
-        
-        self.update_device_status(device_id, "Male...")
-        controller.tap_img("templates/male.png", timeout=30)
-        
-        
-        self.update_device_status(device_id, "next...")
-        controller.tap_img("templates/next.png", timeout=30)  
-        
-        
-        self.update_device_status(device_id, "Input Phone Number...")
-        controller.tap_img("templates/mobile_number.png", timeout=30)
-        controller.send_text(phone_number)
-        
-        
-        self.update_device_status(device_id, "next...")
-        controller.tap_img("templates/next.png", timeout=30)  
-        
-        
-        templates_2 = [
-            "templates/eye_icon.png",
-            "templates/continue_create_account.png",
-        ]
-      
-        matched_template2 = controller.tap_multiple_templates(templates_2, timeout=20)
-        
-        if matched_template2 == "templates/eye_icon.png":
-            controller.send_text(password)
-            controller.tap_img("templates/next.png", timeout=30)
-        
-        if matched_template2 == "templates/continue_create_account.png":
-            controller.tap_img("templates/continue_create_account.png", timeout=30)
-            controller.wait(2)
-            controller.send_text(password)
-            controller.tap_img("templates/next.png", timeout=30)
+        em.wait(1)
 
         
+        self.update_device_status(device_id,"Wait Last Name")
+        em.wait_img("templates/katana/last_name.png")
+        self.update_device_status(device_id,"Last Name Found")
         
+        first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info().values()
+        
+        em.wait(1)
+        em.send_text(first_name)
+        
+        em.tap_img("templates/katana/last_name.png")
+        self.update_device_status(device_id,"Input Last Name")
+        em.wait(1)
+        em.send_text(last_name)
+        em.wait(1)
+        
+        em.tap_img("templates/katana/next.png")
+        self.update_device_status(device_id,"Next")
+        
+        if(em.wait_img("templates/katana/set_date.png") == False):
+            self.update_device_status(device_id,"Set Date Not Found")
+            em.wait(10)
+            return
 
+        # Generate random birthdate
+        year_random = random.randint(27, 35)
+        month_random = random.randint(20, 40)
+        day_random = random.randint(10, 30)
+        for x in range(year_random):
+            em.tap(383, 402)
+            time.sleep(0.1)
+        for x in range(month_random):
+            em.tap(266, 404)
+            time.sleep(0.1)
+        for x in range(day_random):
+            em.tap(146, 404)
+            time.sleep(0.1)
+            
+        em.tap_img("templates/katana/set_date.png")
+        em.tap_img("templates/katana/next.png")
+        
+        em.tap_img("templates/katana/male.png")
+        em.tap_img("templates/katana/next.png")
+        
+        em.tap_img("templates/katana/mobile_number.png")
+        em.wait(1)
+        
+        em.send_text(phone_number)
+        em.wait(1)
+        
+        em.tap_img("templates/katana/next.png")
+        
+        if(em.wait_img("templates/katana/eye_img.png") == False):
+            self.update_device_status(device_id,"eye_img Not Found")
+            em.wait(10)
+            return
+        
+        em.wait(1)
+        em.send_text(password)
+        
+        em.tap_img("templates/katana/next.png")
+        
+        em.tap_img("templates/katana/save.png")
+        
+        em.tap_img("templates/katana/agree.png")
+        
+        em.tap_img("templates/katana/i_dont_get_code.png")
+        
+        em.tap_img("templates/katana/confirm_by_email.png")
+        
+        em.tap_img("templates/katana/email.png")
+        
+        em.wait(1)
+        em.send_text(alias_email)
+        em.wait(1)
+        
+        em.tap_img("templates/katana/next.png")
+        
+        
+        em.wait(200)
+            
+        
+        
+        
+        
+        
+        
 
 

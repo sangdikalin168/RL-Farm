@@ -1,8 +1,6 @@
 import os
 import re
 import time
-import random
-import string
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 import cv2
@@ -10,14 +8,15 @@ import cv2
 
 class ADBController:
     """ADB Controller for automating Facebook registration on Android emulators."""
-    ADB_PATH = r"C:\Users\MSI\Desktop\RL Farm\adb\adb.exe"
+
     def __init__(self, device_id):
         self.device_id = device_id
+        self.adb_path = os.path.join(os.getcwd(), "adb", "adb.exe")
     
     def run_adb_command(self, command):
         """Runs an ADB command and returns the output."""
         try:
-            full_command = [self.ADB_PATH, "-s", self.device_id] + command
+            full_command = [self.adb_path, "-s", self.device_id] + command
             result = subprocess.run(full_command, capture_output=True, text=True, check=True)
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
@@ -40,20 +39,10 @@ class ADBController:
         escaped_text = text.replace(" ", "%s")
         self.run_adb_command(["shell", "input", "text", escaped_text])
 
-    def open_facebook(self, lite=False):
-        """Opens Facebook or Facebook Lite."""
-        if lite:
-            self.run_adb_command(["shell", "am", "start", "-n", "com.facebook.lite/com.facebook.lite.MainActivity"])
-        else:
-            self.run_adb_command(["shell", "am", "start", "-n", "com.facebook.katana/.LoginActivity"])
-        time.sleep(5)
+    def open_app(self, package_name):
+        """Open an app on the emulator by package name."""
+        self.run_adb_command(["shell", "monkey", "-p", package_name, "-c", "android.intent.category.LAUNCHER", "1"])
 
-    def clear_facebook_data(self):
-        """Clears Facebook app data to reset the registration flow."""
-        print(f"🧹 Clearing Facebook data on {self.device_id}...")
-        self.run_adb_command(["shell", "pm", "clear", "com.facebook.katana"])
-        time.sleep(3)
-    
     def take_screenshot(self, screenshot_path):
         """Takes a screenshot and saves it."""
         remote_path = "/sdcard/screen.png"
@@ -123,7 +112,7 @@ class ADBController:
         print("❌ Image not found after max attempts.")
         return False
 
-    def tap_multiple_templates(self, template_paths, timeout=30, delay=1, match_actions=None):
+    def tap_imgs(self, template_paths, timeout=30, delay=1, match_actions=None):
         """🔥 Detects multiple templates on the screen and taps the first match.
         
         Args:
@@ -182,7 +171,167 @@ class ADBController:
         print("⏳ Timeout! No template matched.")
         return None  # No match found
 
+    def wait_img(self, template_path, max_attempts=10, delay=1, timeout=30):
+        """🔥 Waits for an image to appear on the screen.
+
+        Args:
+            template_path (str): Path to the template image.
+            max_attempts (int, optional): Maximum attempts to find the image. Defaults to 10.
+            delay (int, optional): Delay between retries in seconds. Defaults to 1.
+            timeout (int, optional): Maximum time allowed before stopping. Defaults to 30s.
+        
+        Returns:
+            bool: True if the image is found, False otherwise.
+        """
+        
+        screenshot_folder = "screenshots"
+        os.makedirs(screenshot_folder, exist_ok=True)
+        screenshot_path = os.path.join(screenshot_folder, f"screenshot_{re.sub(r'[^a-zA-Z0-9]', '_', self.device_id)}.png")
+
+        start_time = time.time()
+        for attempt in range(max_attempts):
+            # ✅ Check timeout condition
+            elapsed_time = time.time() - start_time
+            if elapsed_time > timeout:
+                print(f"⏳ Timeout reached ({timeout}s)! Stopping search.")
+                return False
+
+            # ✅ Take a fresh screenshot
+            self.take_screenshot(screenshot_path)
+
+            # ✅ Load images
+            screenshot = cv2.imread(screenshot_path, cv2.IMREAD_GRAYSCALE)
+            template = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
+
+            if screenshot is None:
+                print("❌ Failed to load the screenshot!")
+                return False
+            if template is None:
+                print(f"❌ Template image not found at: {template_path}")
+                return False
+
+            # ✅ Match template
+            result = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, _ = cv2.minMaxLoc(result)
+
+            # ✅ Check match confidence
+            if max_val >= 0.8:
+                print(f"✅ Image detected after {attempt + 1} attempts!")
+                return True
+
+            print(f"🔄 Attempt {attempt + 1}/{max_attempts}: Image not found, retrying in {delay}s...")
+            time.sleep(delay)
+            
+        print("❌ Image not found after max attempts.")
+        return False
+    
+    def wait_imgs(self, template_paths, timeout=30, delay=1):
+        """🔥 Waits for multiple images to appear on the screen.
+
+        Args:
+            template_paths (list): List of image paths to match.
+            timeout (int, optional): Maximum wait time before stopping (seconds). Defaults to 30.
+            delay (int, optional): Delay between retries in seconds. Defaults to 1.
+            
+        Returns:
+            str: The matched template path if found, else None.
+        """
+        
+        screenshot_folder = "screenshots"
+        os.makedirs(screenshot_folder, exist_ok=True)
+        screenshot_path = os.path.join(screenshot_folder, f"screenshot_{re.sub(r'[^a-zA-Z0-9]', '_', self.device_id)}.png")
+
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            # ✅ Take a fresh screenshot
+            self.take_screenshot(screenshot_path)
+
+            # ✅ Load screenshot
+            screenshot = cv2.imread(screenshot_path, cv2.IMREAD_GRAYSCALE)
+            if screenshot is None:
+                print("❌ Failed to load the screenshot!")
+                return None
+
+            for template_path in template_paths:
+                template = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
+                if template is None:
+                    print(f"❌ Template not found: {template_path}")
+                    continue
+
+                # ✅ Match template
+                result = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
+                _, max_val, _, _ = cv2.minMaxLoc(result)
+
+                if max_val >= 0.8:
+                    print(f"✅ Detected {template_path} after {time.time() - start_time:.2f}s!")
+                    return template_path
+
+            print(f"🔄 Retrying... Waiting {delay}s")
+            time.sleep(delay)
+            
+        print("⏳ Timeout! No template matched.")
+        return None
+    
     def wait(self, seconds: float):
         """Waits for a specified amount of seconds."""
         time.sleep(seconds)
 
+    def swipe(self, start_x, start_y, end_x, end_y, duration=200):
+        """Simulates a swipe gesture on the device."""
+        self.run_adb_command(["shell", "input", "swipe", str(start_x), str(start_y), str(end_x), str(end_y), str(duration)])
+        
+    def clear_facebook_data(self):
+        """🔥 Fully clear Facebook data and spoof device identity with proper root access."""
+        print(f"🔥 Clearing Facebook data on {self.device_id}...")
+
+        # ✅ Step 1: Ensure ADB root mode is enabled
+        adb_root_status = self.run_adb_command(["-s", self.device_id, "shell", "whoami"])
+        if adb_root_status != "root":
+            print("⚠️ Warning: Emulator may not have full root access. Trying alternative methods.")
+
+        # ✅ Step 2: Force Stop & Remove Facebook Data
+        print("🛑 Force stopping Facebook...")
+        self.run_adb_command(["-s", self.device_id, "shell", "am", "force-stop", "com.facebook.katana"])
+
+        print("🧹 Clearing Facebook app data...")
+        self.run_adb_command(["-s", self.device_id, "shell", "pm", "clear", "com.facebook.katana"])  # Normal clear
+
+        if adb_root_status == "root":
+            self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/data/data/com.facebook.katana"], as_root=True)
+            self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/sdcard/Android/data/com.facebook.katana"], as_root=True)
+
+        # ✅ Step 3: Spoof Device Identity (Fixed Argument Error)
+        print("🔄 Changing device identity...")
+        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "device_name", "\"Samsung Galaxy S23\""])
+        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "model", "\"SM-S911B\""])
+        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "manufacturer", "\"samsung\""])
+        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "brand", "\"samsung\""])
+
+        if adb_root_status == "root":
+            self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "android_id", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
+
+        # ✅ Step 4: Reset Google Advertising ID (GAID)
+        print("🔄 Resetting Advertising ID...")
+        if adb_root_status == "root":
+            self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/data/data/com.google.android.gms/shared_prefs/adid_settings.xml"], as_root=True)
+        
+        self.run_adb_command(["-s", self.device_id, "shell", "am", "broadcast", "-a", "com.google.android.gms.INITIALIZE"])
+        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "adb_enabled", "0"])
+        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "adb_enabled", "1"])
+
+        # ✅ Step 5: Spoof Network Identifiers (IMEI, MAC, Hostname) - Using Root Only If Available
+        print("🔄 Spoofing network identifiers...")
+        if adb_root_status == "root":
+            self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.serialno", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
+            self.run_adb_command(["-s", self.device_id, "shell", "setprop", "net.hostname", "android-$(date +%s%N | md5sum | cut -c 1-8)"], as_root=True)
+            self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.boot.wifimac", "$(cat /sys/class/net/wlan0/address | sed 's/://g')"], as_root=True)
+            self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.boot.btmacaddr", "$(cat /sys/class/net/bt0/address | sed 's/://g')"], as_root=True)
+        else:
+            print("⚠️ Warning: Root commands skipped due to missing `su`.")
+
+        # ✅ Step 6: Restart Facebook Instead of Emulator
+        print("🔄 Restarting Facebook services...")
+        self.run_adb_command(["-s", self.device_id, "shell", "am", "force-stop", "com.facebook.katana"])
+        self.run_adb_command(["-s", self.device_id, "shell", "am", "start", "-n", "com.facebook.katana/.LoginActivity"])
+
+        print("✅ Facebook data cleared, identity spoofed, and app restarted successfully!")

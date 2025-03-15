@@ -20,9 +20,6 @@ class MainWindow:
         self.master.grid_columnconfigure(0, weight=1)
         self.master.grid_columnconfigure(1, weight=1)
 
-        # ✅ Start real-time updates for Emulator
-        self.emulator_view.update_emulator_status_loop()
-
 if __name__ == "__main__":
     root = Tk()
     app = MainWindow(root)
