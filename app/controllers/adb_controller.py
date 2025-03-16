@@ -50,7 +50,50 @@ class ADBController:
         self.run_adb_command(["pull", remote_path, screenshot_path])
         self.run_adb_command(["shell", "rm", remote_path])
 
-    def tap_img(self, template_path, max_attempts=10, delay=1, timeout=30):
+    def detect_templates(self, template_paths, threshold=0.6, timeout=60, check_interval=1):
+        """Continuously checks for templates until a match is found or timeout is reached."""
+        screenshot_folder = "screenshots"
+        os.makedirs(screenshot_folder, exist_ok=True)
+        screenshot_path = os.path.join(screenshot_folder, f"screenshot_{re.sub(r'[^a-zA-Z0-9]', '_', self.device_id)}.png")
+        start_time = time.time()
+
+        while (time.time() - start_time) < timeout:
+            self.take_screenshot(screenshot_path)
+
+            if not os.path.exists(screenshot_path) or os.path.getsize(screenshot_path) == 0:
+                print("❌ Screenshot not found or empty.")
+                return None  
+            
+            screen = cv2.imread(screenshot_path, cv2.IMREAD_GRAYSCALE)
+            if screen is None:
+                print("❌ Failed to load screenshot image. Check file integrity.")
+                return None
+            
+            for template_image_path in template_paths:
+                template_name = os.path.basename(template_image_path)
+                if not os.path.exists(template_image_path):
+                    print(f"⚠️ Template file not found: {template_image_path}")
+                    continue
+                
+                template = cv2.imread(template_image_path, cv2.IMREAD_GRAYSCALE)
+                if template is None:
+                    print(f"⚠️ Failed to load template image: {template_image_path}")
+                    continue
+                
+                result = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)
+                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+                print(f"🔍 {template_name}: Match Confidence = {max_val:.4f}")
+                
+                if max_val >= 0.6:
+                    print(f"✅ Match found for {template_name}. Returning path.")
+                    return template_image_path  
+                
+            time.sleep(check_interval)  
+        
+        print("⏳ Timeout! No template matched within the wait time.")
+        return None
+    
+    def tap_img(self, template_path, max_attempts=200, delay=1, timeout=60):
         """🔥 Detects an image on the screen and taps it.
 
         Args:
@@ -102,17 +145,17 @@ class ADBController:
                 h, w = template.shape[:2]
                 center_x, center_y = max_loc[0] + w // 2, max_loc[1] + h // 2
 
-                print(f"✅ Image detected! Tapping at ({center_x}, {center_y})...")
+                # print(f"✅ Image detected! Tapping at ({center_x}, {center_y})...")
                 self.tap(center_x, center_y)  # ✅ Perform tap action
                 return True
 
-            print(f"🔄 Attempt {attempt + 1}/{max_attempts}: Image not found, retrying in {delay}s...")
+            # print(f"🔄 Attempt {attempt + 1}/{max_attempts}: Image not found, retrying in {delay}s...")
             time.sleep(delay)
 
         print("❌ Image not found after max attempts.")
         return False
 
-    def tap_imgs(self, template_paths, timeout=30, delay=1, match_actions=None):
+    def tap_imgs(self, template_paths, timeout=60, delay=1, match_actions=None):
         """🔥 Detects multiple templates on the screen and taps the first match.
         
         Args:
@@ -171,7 +214,7 @@ class ADBController:
         print("⏳ Timeout! No template matched.")
         return None  # No match found
 
-    def wait_img(self, template_path, max_attempts=10, delay=1, timeout=30):
+    def wait_img(self, template_path, max_attempts=200, delay=1, timeout=60):
         """🔥 Waits for an image to appear on the screen.
 
         Args:
@@ -216,16 +259,16 @@ class ADBController:
 
             # ✅ Check match confidence
             if max_val >= 0.8:
-                print(f"✅ Image detected after {attempt + 1} attempts!")
+                # print(f"✅ Image detected after {attempt + 1} attempts!")
                 return True
 
-            print(f"🔄 Attempt {attempt + 1}/{max_attempts}: Image not found, retrying in {delay}s...")
+            # print(f"🔄 Attempt {attempt + 1}/{max_attempts}: Image not found, retrying in {delay}s...")
             time.sleep(delay)
             
         print("❌ Image not found after max attempts.")
         return False
     
-    def wait_imgs(self, template_paths, timeout=30, delay=1):
+    def wait_imgs(self, template_paths, timeout=60, delay=1):
         """🔥 Waits for multiple images to appear on the screen.
 
         Args:

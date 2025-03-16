@@ -18,6 +18,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tkinter as tk
 from app.utils.user_generator import generate_info
+from app.utils.zoho import get_confirmation_code
 
 class EmulatorView:
     def __init__(self, master):
@@ -327,7 +328,7 @@ class EmulatorView:
     
     def start_register_action(self):
         """Start Facebook registration on selected emulators in parallel, ensuring UI remains responsive."""
-        num_rounds = 1  # ✅ Number of registration rounds per emulator
+        num_rounds = 9999  # ✅ Number of registration rounds per emulator
         selected_devices = self.get_selected_devices()
 
         if not selected_devices:
@@ -448,8 +449,8 @@ class EmulatorView:
         
         self.update_device_status(device_id,"Get Started Page Found")
         em.wait(1)
-        em.tap(268.4,560.3)
         
+        em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
         em.wait(1)
 
         
@@ -471,39 +472,78 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         self.update_device_status(device_id,"Next")
         
-        if(em.wait_img("templates/katana/set_date.png") == False):
-            self.update_device_status(device_id,"Set Date Not Found")
-            em.wait(10)
+        invalid_name = em.detect_templates(["templates/katana/invalid.png", "templates/katana/invalid_first_name.png","templates/katana/set_date.png"])
+        
+        
+        if "invalid" in invalid_name:
+            self.update_device_status(device_id,"Invalid Name")
+            em.wait(5)
             return
+        
+        if "invalid_first_name" in invalid_name:
+            self.update_device_status(device_id,"Invalid First Name")
+            em.tap_img("templates/katana/invalid_first_name.png")
+            em.wait(1)
+            em.send_text(first_name)
+            em.wait(1)
+            em.tap_img("templates/katana/next.png")
+
 
         # Generate random birthdate
         year_random = random.randint(27, 35)
         month_random = random.randint(20, 40)
         day_random = random.randint(10, 30)
+        
+        self.update_device_status(device_id,"set year")
         for x in range(year_random):
             em.tap(383, 402)
             time.sleep(0.1)
+            
+        self.update_device_status(device_id,"set month")
         for x in range(month_random):
             em.tap(266, 404)
             time.sleep(0.1)
+        
+        self.update_device_status(device_id,"set date")
         for x in range(day_random):
             em.tap(146, 404)
             time.sleep(0.1)
             
         em.tap_img("templates/katana/set_date.png")
+        
+        self.update_device_status(device_id,"next")
         em.tap_img("templates/katana/next.png")
         
+        self.update_device_status(device_id,"Select Gender")
         em.tap_img("templates/katana/male.png")
+        
+        self.update_device_status(device_id,"next")
         em.tap_img("templates/katana/next.png")
         
-        em.tap_img("templates/katana/mobile_number.png")
+        
+        detected_sign_up = em.detect_templates(["templates/katana/sign_up_with_phone.png", "templates/katana/sign_up_with_email.png"], timeout=5)
+        
+        if "sign_up_with_phone.png" in detected_sign_up:
+            self.update_device_status(device_id, "Sign Up With Phone")
+            em.tap_img("templates/katana/sign_up_with_phone.png")
+        
+        if "sign_up_with_email.png" in detected_sign_up:
+            self.update_device_status(device_id, "Sign Up With Email")
+        
+        
+        self.update_device_status(device_id,"Click Phone")
+        em.tap_img("templates/katana/mobile_number.png",timeout=5)
         em.wait(1)
         
+        self.update_device_status(device_id,"Set Phone")
         em.send_text(phone_number)
         em.wait(1)
         
+        
+        self.update_device_status(device_id,"Next")
         em.tap_img("templates/katana/next.png")
         
+        self.update_device_status(device_id,"Wait Password Textbox")
         if(em.wait_img("templates/katana/eye_img.png") == False):
             self.update_device_status(device_id,"eye_img Not Found")
             em.wait(10)
@@ -512,13 +552,38 @@ class EmulatorView:
         em.wait(1)
         em.send_text(password)
         
+        
+        self.update_device_status(device_id,"next")
         em.tap_img("templates/katana/next.png")
         
+        self.update_device_status(device_id,"save")
         em.tap_img("templates/katana/save.png")
         
+        self.update_device_status(device_id,"agree")
         em.tap_img("templates/katana/agree.png")
         
-        em.tap_img("templates/katana/i_dont_get_code.png")
+        
+        detected_t1 = em.detect_templates(
+            [
+                "templates/katana/cannot_create_account.png",
+                "templates/katana/we_need_more_info.png",
+                "templates/katana/i_dont_get_code.png",
+                "templates/katana/make_sure.png",
+            ]
+        )
+        
+        self.update_device_status(device_id,"Detect Spam")
+        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
+            self.update_device_status(device_id,"Spam Device")
+            return
+        
+        if "make_sure.png" in detected_t1:
+            self.update_device_status(device_id,"Make Sure Device")
+            em.tap_img("templates/katana/continue.png")
+
+            
+        em.tap_img("templates/katana/i_dont_get_code.png",timeout=60)
+        self.update_device_status(device_id,"i_dont_get_code")
         
         em.tap_img("templates/katana/confirm_by_email.png")
         
@@ -530,6 +595,30 @@ class EmulatorView:
         
         em.tap_img("templates/katana/next.png")
         
+        
+        verify_code_count = 0
+        while True:
+            code = get_confirmation_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)
+            verify_code_count += 1
+            if(verify_code_count == 5):
+                return
+            if str(code).isnumeric():
+                print("Code Received: "+ code)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
+            em.wait(1)
+
+        em.send_text(code)
+        
+        em.tap_img("templates/katana/next.png")
+        
+        
+        
+        detect_appeal = em.detect_templates(["templates/katana/appeal.png"])
+        if "appeal.png" in detect_appeal:
+            self.update_device_status(device_id,"appeal")
+            em.wait(3)
+            return
         
         em.wait(200)
             
