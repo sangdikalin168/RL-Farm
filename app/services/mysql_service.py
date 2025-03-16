@@ -177,10 +177,10 @@ class MySQLService:
             print("⚠️ Warning: .env file not found!")
 
         self.db_config = {
-            "host": os.getenv("DB_HOST", "localhost"),
-            "user": os.getenv("DB_USER", "root"),
-            "password": os.getenv("DB_PASSWORD", ""),
-            "database": os.getenv("DB_NAME", "yourdatabase"),
+            "host": os.getenv("DB_HOST", "203.176.133.252"),
+            "user": os.getenv("DB_USER", "admin"),
+            "password": os.getenv("DB_PASSWORD", "admin@MHG168"),
+            "database": os.getenv("DB_NAME", "facebook_register"),
         }
 
         attempts = 3
