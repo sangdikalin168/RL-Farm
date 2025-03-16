@@ -50,7 +50,7 @@ class ADBController:
         self.run_adb_command(["pull", remote_path, screenshot_path])
         self.run_adb_command(["shell", "rm", remote_path])
 
-    def detect_templates(self, template_paths, threshold=0.6, timeout=60, check_interval=1):
+    def detect_templates(self, template_paths, threshold=0.8, timeout=60, check_interval=1):
         """Continuously checks for templates until a match is found or timeout is reached."""
         screenshot_folder = "screenshots"
         os.makedirs(screenshot_folder, exist_ok=True)
@@ -84,7 +84,7 @@ class ADBController:
                 min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
                 print(f"🔍 {template_name}: Match Confidence = {max_val:.4f}")
                 
-                if max_val >= 0.6:
+                if max_val >= threshold:
                     print(f"✅ Match found for {template_name}. Returning path.")
                     return template_image_path  
                 

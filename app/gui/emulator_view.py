@@ -79,9 +79,9 @@ class EmulatorView:
         self.start_register_button = ttkb.Button(button_frame, text="Start Register", command=self.start_register_action, style="success.TButton")
         self.start_register_button.grid(row=0, column=3, padx=5)
 
-        # ✅ Load Emulator & Change IMEI Buttons
-        self.load_emulator_button = ttkb.Button(button_frame, text="Load Emulator", command=self.load_players, style="success.TButton")
-        self.load_emulator_button.grid(row=0, column=4, padx=5)
+        # # ✅ Load Emulator & Change IMEI Buttons
+        # self.load_emulator_button = ttkb.Button(button_frame, text="Load Emulator", command=self.load_players, style="success.TButton")
+        # self.load_emulator_button.grid(row=0, column=4, padx=5)
 
         self.change_imei_button = ttkb.Button(button_frame, text="Change IMEI", command=self.emulator.change_imei, style="success.TButton")
         self.change_imei_button.grid(row=0, column=5, padx=5)
@@ -521,14 +521,16 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         
         
-        detected_sign_up = em.detect_templates(["templates/katana/sign_up_with_phone.png", "templates/katana/sign_up_with_email.png"], timeout=5)
+        detected_sign_up = em.detect_templates(["templates/katana/what_is_your_email.png", "templates/katana/mobile_number.png"])
         
-        if "sign_up_with_phone.png" in detected_sign_up:
-            self.update_device_status(device_id, "Sign Up With Phone")
+        print(detected_sign_up)
+        
+        if "what_is_your_email.png" in detected_sign_up:
+            self.update_device_status(device_id, "Sign Up With Email")
             em.tap_img("templates/katana/sign_up_with_phone.png")
             
-        if "sign_up_with_email.png" in detected_sign_up:
-            self.update_device_status(device_id, "Sign Up With Email")
+        if "mobile_number.png" in detected_sign_up:
+            self.update_device_status(device_id, "Sign Up Phone")
         
         
         self.update_device_status(device_id,"Click Phone")
