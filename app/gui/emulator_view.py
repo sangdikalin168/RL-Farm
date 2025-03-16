@@ -525,10 +525,10 @@ class EmulatorView:
         
         if "sign_up_with_phone.png" in detected_sign_up:
             self.update_device_status(device_id, "Sign Up With Phone")
+            em.tap_img("templates/katana/sign_up_with_phone.png")
             
         if "sign_up_with_email.png" in detected_sign_up:
             self.update_device_status(device_id, "Sign Up With Email")
-            em.tap_img("templates/katana/sign_up_with_phone.png")
         
         
         self.update_device_status(device_id,"Click Phone")
