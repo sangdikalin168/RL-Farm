@@ -1,3 +1,4 @@
 .env
 #ingore all files in screenshots folder
 screenshots/*
+**/__pycache__/
