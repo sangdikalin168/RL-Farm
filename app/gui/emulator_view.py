@@ -154,7 +154,7 @@ class EmulatorView:
             self.emulator_tree.insert("", "end", values=("", "No Players Found", "", ""))
             return
 
-        for idx, (player_index, data) in enumerate(emulator_data.items(), start=1):
+        for idx, (player_index, data) in enumerate(emulator_data.items(), start=0):
             device_id = data["device_id"] if data["device_id"] else "Not Available"
             status = data["status"]
 
@@ -338,7 +338,7 @@ class EmulatorView:
                     shutil.rmtree(file_path)
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
-        
+
         """Start Facebook registration on selected emulators in parallel, ensuring UI remains responsive."""
         num_rounds = 9999  # ✅ Number of registration rounds per emulator
         selected_devices = self.get_selected_devices()
@@ -441,29 +441,46 @@ class EmulatorView:
         
         self.update_device_status(device_id,"Waiting Meta Logo")
         meta_logo = em.wait_img("templates/katana/meta_logo.png")
-        
+
         if( meta_logo == False):
             self.update_device_status(device_id,"Meta Logo Not Found")
             em.wait(10)
             return
         
-        em.wait(1)
-        self.update_device_status(device_id,"Tap Create Account")
-        em.tap(263.5,854.5)
+        login_templates = em.detect_templates([
+            "templates/katana/login_step/create_new_account.png",
+            "templates/katana/login_step/create_new_account_1.png",
+            "templates/katana/login_step/join_facebook.png",
+            "templates/katana/login_step/sign_up.png",
+            "templates/katana/login_step/create_new_account_blue.png",
+            "templates/katana/login_step/get_started.png"
+        ])
+        
+        skip_get_started = False
+        
+        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
+            self.update_device_status(device_id,"Create New Account")
+            em.tap(270.0,857.9)
         
         
-        get_started_page = em.wait_img("templates/katana/get_started_page.png")
+        if "create_new_account_blue.png" in login_templates:
+            self.update_device_status(device_id,"Create New Account Blue")
+            em.tap_img("templates/katana/login_step/create_new_account_blue.png")
+            skip_get_started = True
         
-        if(get_started_page == False):
-            self.update_device_status(device_id,"Get Started Page Not Found")
-            em.wait(10)
-            return
+        if "get_started.png" in login_templates:
+            self.update_device_status(device_id,"Get Started")
+            em.tap_img("templates/katana/get_started.png")
+            skip_get_started = True
         
-        self.update_device_status(device_id,"Get Started Page Found")
-        em.wait(1)
         
-        em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
-        em.wait(1)
+        if skip_get_started == False:
+            em.tap_img("templates/katana/get_started.png", timeout=5)    
+            self.update_device_status(device_id,"Get Started Page Found")
+            em.wait(1)
+            
+            em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
+            em.wait(1)
 
         
         self.update_device_status(device_id,"Wait Last Name")
@@ -484,7 +501,7 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         self.update_device_status(device_id,"Next")
         
-        invalid_name = em.detect_templates(["templates/katana/invalid_first_name.png","templates/katana/invalid.png","templates/katana/set_date.png"])
+        invalid_name = em.detect_templates(["templates/katana/invalid.png", "templates/katana/invalid_first_name.png","templates/katana/set_date.png"])
         
         
         if "invalid" in invalid_name:
@@ -556,16 +573,19 @@ class EmulatorView:
         
         self.update_device_status(device_id,"Next")
         em.tap_img("templates/katana/next.png")
+
+
+        continue_create_account = em.detect_templates(["templates/katana/continue_create_account.png", "templates/katana/eye_img.png"])
+        
+        if 'continue_create_account.png' in continue_create_account:
+            em.tap_img("templates/katana/continue_create_account.png")
         
         self.update_device_status(device_id,"Wait Password Textbox")
-        if(em.wait_img("templates/katana/eye_img.png") == False):
-            self.update_device_status(device_id,"eye_img Not Found")
-            em.wait(10)
-            return
-        
+        if 'eye_img.png' in continue_create_account:
+            self.update_device_status(device_id,"Password Textbox Found")
+
         em.wait(1)
         em.send_text(password)
-        
         
         self.update_device_status(device_id,"next")
         em.tap_img("templates/katana/next.png")
@@ -583,25 +603,35 @@ class EmulatorView:
                 "templates/katana/we_need_more_info.png",
                 "templates/katana/i_dont_get_code.png",
                 "templates/katana/make_sure.png",
-                "templates/katana/logged_as.png"
+                "templates/katana/before_send.png",
             ]
         )
+        skip_idont_get_code = False
         
         self.update_device_status(device_id,"Detect Spam")
-        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1 or "logged_as.png" in detected_t1:
+        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
             self.update_device_status(device_id,"Spam Device")
             return
         
         if "make_sure.png" in detected_t1:
             self.update_device_status(device_id,"Make Sure Device")
             em.tap_img("templates/katana/continue.png")
-
+        
+        if "before_send.png" in detected_t1:
+            self.update_device_status(device_id,"try_another_way")
+            em.tap_img("templates/katana/try_another_way.png")
             
-        em.tap_img("templates/katana/i_dont_get_code.png",timeout=60)
-        self.update_device_status(device_id,"i_dont_get_code")
+            self.update_device_status(device_id,"confirm_by_email")
+            em.tap_img("templates/katana/confirm_by_email.png")
+            skip_idont_get_code = True
+
+
+        if skip_idont_get_code == False:
+            em.tap_img("templates/katana/i_dont_get_code.png",timeout=60)
+            self.update_device_status(device_id,"i_dont_get_code")
+            em.tap_img("templates/katana/confirm_by_email.png")
         
-        em.tap_img("templates/katana/confirm_by_email.png")
-        
+
         em.tap_img("templates/katana/email.png")
         
         em.wait(1)
@@ -635,5 +665,14 @@ class EmulatorView:
             self.update_device_status(device_id,"appeal")
             em.wait(3)
             return
+        
+        em.wait(200)
+            
+        
+        
+        
+        
+        
+        
 
 
