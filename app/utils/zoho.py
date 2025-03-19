@@ -9,7 +9,7 @@ def get_confirmation_code(primary_email, alias_email, password):
 
     try:
         with MailBox(IMAP_SERVER).login(primary_email, password, initial_folder="INBOX") as mailbox:
-            emails = mailbox.fetch(limit=100, reverse=True) # Fetch the latest 200 emails
+            emails = mailbox.fetch(limit=35, reverse=True) # Fetch the latest 30 emails
 
             for msg in emails:
                 email_to = list(msg.to)  # Convert tuple to list

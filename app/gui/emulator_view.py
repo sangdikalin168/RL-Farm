@@ -431,6 +431,8 @@ class EmulatorView:
         em.open_app(selected_package)  # ✅ Open Facebook Lite app
         """Registers a new Facebook account using ADB commands."""
         print(f"📲 Registering Facebook on {device_id}...")
+        
+        
     
     def register_katana(self, device_id, selected_package):
         em = ADBController(device_id)
@@ -482,10 +484,18 @@ class EmulatorView:
             em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
             em.wait(1)
 
+        self.update_device_status(device_id,"Last Name Or Get Started")
+        detect_ttt = em.detect_templates(["templates/katana/last_name.png", "templates/katana/get_started.png"])
         
-        self.update_device_status(device_id,"Wait Last Name")
-        em.wait_img("templates/katana/last_name.png")
-        self.update_device_status(device_id,"Last Name Found")
+        if "last_name.png" in detect_ttt:
+            self.update_device_status(device_id,"Wait Last Name")
+            em.wait_img("templates/katana/last_name.png")
+            self.update_device_status(device_id,"Last Name Found")
+        
+        if "get_started.png" in detect_ttt:
+            self.update_device_status(device_id,"Get Started")
+            em.tap_img("templates/katana/get_started.png")
+            self.update_device_status(device_id,"Get Started Clicked")
         
         first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info().values()
         
@@ -501,12 +511,15 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         self.update_device_status(device_id,"Next")
         
-        invalid_name = em.detect_templates(["templates/katana/invalid.png", "templates/katana/invalid_first_name.png","templates/katana/set_date.png"])
+        invalid_name = em.detect_templates([
+            "templates/katana/invalid_first_name.png",
+            "templates/katana/invalid.png", 
+            "templates/katana/set_date.png"])
         
         
         if "invalid" in invalid_name:
             self.update_device_status(device_id,"Invalid Name")
-            em.wait(5)
+            em.wait(1)
             return
         
         if "invalid_first_name" in invalid_name:
@@ -666,7 +679,6 @@ class EmulatorView:
             em.wait(3)
             return
         
-        em.wait(200)
             
         
         
