@@ -1,4 +1,5 @@
 import random
+import shutil
 import time
 import ttkbootstrap as ttkb
 from ttkbootstrap import Button
@@ -327,6 +328,17 @@ class EmulatorView:
             executor.submit(self.emulator.arrange_windows)  # ✅ Arrange all windows concurrently
     
     def start_register_action(self):
+        #delete all files in folder screenshots
+        for filename in os.listdir("screenshots"):
+            file_path = os.path.join("screenshots", filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print('Failed to delete %s. Reason: %s' % (file_path, e))
+        
         """Start Facebook registration on selected emulators in parallel, ensuring UI remains responsive."""
         num_rounds = 9999  # ✅ Number of registration rounds per emulator
         selected_devices = self.get_selected_devices()
@@ -472,7 +484,7 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         self.update_device_status(device_id,"Next")
         
-        invalid_name = em.detect_templates(["templates/katana/invalid.png", "templates/katana/invalid_first_name.png","templates/katana/set_date.png"])
+        invalid_name = em.detect_templates(["templates/katana/invalid_first_name.png","templates/katana/invalid.png","templates/katana/set_date.png"])
         
         
         if "invalid" in invalid_name:
@@ -571,11 +583,12 @@ class EmulatorView:
                 "templates/katana/we_need_more_info.png",
                 "templates/katana/i_dont_get_code.png",
                 "templates/katana/make_sure.png",
+                "templates/katana/logged_as.png"
             ]
         )
         
         self.update_device_status(device_id,"Detect Spam")
-        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
+        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1 or "logged_as.png" in detected_t1:
             self.update_device_status(device_id,"Spam Device")
             return
         
@@ -622,14 +635,5 @@ class EmulatorView:
             self.update_device_status(device_id,"appeal")
             em.wait(3)
             return
-        
-        em.wait(200)
-            
-        
-        
-        
-        
-        
-        
 
 

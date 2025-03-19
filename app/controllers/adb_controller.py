@@ -91,7 +91,7 @@ class ADBController:
             time.sleep(check_interval)  
         
         print("⏳ Timeout! No template matched within the wait time.")
-        return None
+        return ""
     
     def tap_img(self, template_path, max_attempts=200, delay=1, timeout=60):
         """🔥 Detects an image on the screen and taps it.
