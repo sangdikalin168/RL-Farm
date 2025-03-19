@@ -10,7 +10,7 @@ class UserView:
         self.frame = ttkb.Frame(self.master, padding=5)
         self.frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
 
-        self.setup_ui()
+        # self.setup_ui()
 
     def setup_ui(self):
         """Create the user section with a dropdown filter for user type."""

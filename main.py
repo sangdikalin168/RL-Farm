@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
-def center_window(window, width=1800, height=800):
+def center_window(window, width=450, height=800):
     """Center the application window on the screen."""
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # ✅ Use ttkbootstrap's `Window` (Better UI theme support)
     app = ttkb.Window(themename="darkly")
     app.title("RL Farm")
-    app.geometry("1600x800")
+    app.geometry("400x400")
     app.resizable(True, True)
 
     center_window(app)  # ✅ Center the window
