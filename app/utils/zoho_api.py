@@ -120,9 +120,11 @@ def extract_confirmation_code(email_data, recipient_email):
     print(f"Found {len(matched_emails)} email(s) matching the recipient email.")
 
     for email in matched_emails:
+        
         # Try extracting the confirmation code from the subject
         subject = email.get('subject', '')
-        subject_match = re.search(r'(\d{5}) is your (Facebook )?confirmation code', subject, re.IGNORECASE)
+        print(subject)
+        subject_match = re.search(r'(\d{5,6}) is your code to confirm this email', subject, re.IGNORECASE)
         if subject_match:
             code = subject_match.group(1)
             print(f"Confirmation code found in subject: {code}")
@@ -175,3 +177,6 @@ def get_confirmation_code(recipient_email):
     else:
         print(f"Failed to retrieve emails. Status code: {response.status_code}, Response: {response.text}")
         return None
+
+
+# print(get_security_code("eth168+7bp7zzgu@zohomail.com"))

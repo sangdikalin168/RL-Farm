@@ -1,7 +1,7 @@
 import requests
 
-country = 'england'
-operator = 'virtual51'
+country = 'mongolia'
+operator = 'virtual21'
 
 
 product = 'facebook'
@@ -128,7 +128,6 @@ def cancel_activation(id):
     else:
         print(f"Error: {response.status_code}, {response.text}")
 
-
 def ban_number(id):
     headers = {
         'Authorization': 'Bearer ' + token,
@@ -150,6 +149,5 @@ def ban_number(id):
 # activation_id = 754879629
 # result = get_latest_sms_code(755064689)
 # print(result)
-
 
 # print(get_available_number())

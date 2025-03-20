@@ -20,7 +20,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import tkinter as tk
 from app.utils.five_sim import ban_number, cancel_activation, get_available_number, get_latest_sms_code, get_sms
 from app.utils.user_generator import generate_info
-from app.utils.zoho import get_confirmation_code
+
+from app.utils.zoho_api import get_confirmation_code
+from app.utils.zoho_generate import generate_zoho_info
 
 class EmulatorView:
     def __init__(self, master):
@@ -737,8 +739,9 @@ class EmulatorView:
             self.update_device_status(device_id,"Input Last Name")
             em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
         
-        first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info().values()
         
+        first_name, last_name, phone_number, password, email = generate_zoho_info()
+
         
         self.update_device_status(device_id,"Input First Name")
         em.wait(1)
@@ -847,7 +850,8 @@ class EmulatorView:
         self.update_device_status(device_id,"Next")
         em.tap_img("templates/katana/next.png")
 
-        continue_create_account = em.detect_templates(["templates/katana/continue_create_account.png", "templates/katana/eye_img.png","templates/katana/password_textbox.png"])
+
+        continue_create_account = em.detect_templates(["templates/katana/continue_create_account.png", "templates/katana/eye_img.png","templates/katana/password_textbox.png","templates/katana/invalid_number.png"])
         
         if 'continue_create_account.png' in continue_create_account:
             em.tap_img("templates/katana/continue_create_account.png")
@@ -859,6 +863,13 @@ class EmulatorView:
         if 'password_textbox.png' in continue_create_account:
             self.update_device_status(device_id,"Click Password Textbox")
             em.tap_img("templates/katana/password_textbox.png")
+        
+        if 'invalid_number.png' in continue_create_account:
+            self.update_device_status(device_id,"Invalid Phone")
+            ban_number(activation_id)
+            cancel_activation(activation_id)
+            em.wait(2)
+            return
 
         em.wait(1)
         em.send_text(password)
@@ -880,6 +891,7 @@ class EmulatorView:
             self.update_device_status(device_id,"agree")
             em.tap_img("templates/katana/agree.png")
         
+        em.wait(10)
         
         detected_t1 = em.detect_templates(
             [
@@ -888,12 +900,14 @@ class EmulatorView:
                 "templates/katana/i_dont_get_code.png",
                 "templates/katana/make_sure.png",
                 "templates/katana/before_send.png",
+                "templates/katana/send_code_vai_sms.png",
             ]
         )
        
         self.update_device_status(device_id,"Detect Spam")
         if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
             self.update_device_status(device_id,"Spam Device")
+            ban_number(activation_id)
             cancel_activation(activation_id)
             return
         
@@ -905,6 +919,11 @@ class EmulatorView:
             self.update_device_status(device_id,"try_another_way")
             em.tap_img("templates/katana/try_another_way.png")
             
+                      
+        if "send_code_vai_sms.png" in detected_t1:
+            self.update_device_status(device_id,"send_code_vai_sms")
+            em.tap_img("templates/katana/send_code_vai_sms.png")   
+    
 
         self.update_device_status(device_id,"Timeout 60s Get SMS")        
         verify_code_count = 0
@@ -930,9 +949,8 @@ class EmulatorView:
         self.update_device_status(device_id,"skip_add_profile")
         em.tap_img("templates/katana/skip_add_profile.png",timeout=20)
         
-        # em.wait(10)
         
-        detect_appeal = em.detect_templates(["templates/katana/appeal.png"],timeout=10)
+        detect_appeal = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
         if "appeal.png" in detect_appeal:
             self.update_device_status(device_id,"appeal")
             em.wait(3)
@@ -957,7 +975,7 @@ class EmulatorView:
         em.tap_img("templates/katana/enter_email.png")
         em.wait(1)
         
-        em.send_text(alias_email)
+        em.send_text(email)
         
         em.wait(1)
         
@@ -983,6 +1001,7 @@ class EmulatorView:
             wait_sms_count += 1
             if(wait_sms_count == 60):
                 ban_number(activation_id)
+                cancel_activation(activation_id)
                 return
             if str(last_sms_code).isnumeric() and last_sms_code != sms_code:
                 print("Code Received: "+ last_sms_code)
@@ -996,6 +1015,39 @@ class EmulatorView:
         em.wait(1)
         
         em.tap_img("templates/katana/continue_text_message.png")
+        
+        confirm_code_count = 0
+        while True:
+            confirm_code = get_confirmation_code(recipient_email=email)
+            confirm_code_count += 1
+            if(confirm_code_count == 30):
+                return
+            if str(confirm_code).isnumeric():
+                print("Code Received: "+ confirm_code)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {confirm_code_count}")
+            em.wait(1)
+        
+        
+        em.tap_img("templates/katana/enter_confirmation_code.png")
+        em.wait(1)
+        em.send_text(confirm_code)
+        em.wait(1)
+        
+        self.update_device_status(device_id,"next_add_email")
+        em.tap_img("templates/katana/next_add_email.png")
+        
+        em.tap_img("templates/katana/close_add_mail.png")
+        
+        em.tap_img("templates/katana/contact_info.png")
+        
+        em.tap_img("templates/katana/phone_img.png")
+        
+        em.tap_img("templates/katana/delete_number.png")
+        
+        em.tap_img("templates/katana/confirm_delete_number.png")
+        
+        em.wait_img("templates/katana/number_deleted.png")
         
         em.wait(200)
         
