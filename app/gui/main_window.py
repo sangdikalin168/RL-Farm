@@ -12,7 +12,7 @@ class MainWindow:
         self.db_service = db_service  # ✅ Store the database service
 
         # ✅ Initialize UI Sections
-        self.emulator_view = EmulatorView(self.master)
+        self.emulator_view = EmulatorView(self.master,self.db_service)
         self.user_view = UserView(self.master, self.db_service)
 
         # ✅ Configure Grid Layout

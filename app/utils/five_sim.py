@@ -125,8 +125,6 @@ def cancel_activation(id):
     response = requests.get(f'https://5sim.net/v1/user/cancel/{id}', headers=headers)
     if response.status_code == 200:
         print('Activation cancelled')
-    else:
-        print(f"Error: {response.status_code}, {response.text}")
 
 def ban_number(id):
     headers = {
@@ -137,9 +135,16 @@ def ban_number(id):
     response = requests.get(f'https://5sim.net/v1/user/bn/{id}', headers=headers)
     if response.status_code == 200:
         print('Activation Banned')
-    else:
-        print(f"Error: {response.status_code}, {response.text}")
+        
+def finish_number(id):
+    headers = {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/json',
+    }
 
+    response = requests.get(f'https://5sim.net/v1/user/finish/{id}', headers=headers)
+    if response.status_code == 200:
+        print('Number Completed')
 
 # activation_id, five_sim_number = get_available_number()
 # print(activation_id,five_sim_number)

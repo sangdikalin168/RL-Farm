@@ -18,15 +18,16 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tkinter as tk
-from app.utils.five_sim import ban_number, cancel_activation, get_available_number, get_latest_sms_code, get_sms
+from app.utils.five_sim import ban_number, cancel_activation, finish_number, get_available_number, get_latest_sms_code, get_sms
 from app.utils.user_generator import generate_info
 
 from app.utils.zoho_api import get_confirmation_code
 from app.utils.zoho_generate import generate_zoho_info
 
 class EmulatorView:
-    def __init__(self, master):
+    def __init__(self, master,db_service):
         self.master = master
+        self.db_service = db_service
         self.emulator = MuMuPlayerController(self)  # ✅ Pass `self` (MainWindow) as a reference to EmulatorController
         self.selected_emulators = {}
         self.selected_package = tk.StringVar(value="com.facebook.katana")
@@ -925,7 +926,8 @@ class EmulatorView:
             em.tap_img("templates/katana/send_code_vai_sms.png")   
     
 
-        self.update_device_status(device_id,"Timeout 60s Get SMS")        
+        self.update_device_status(device_id,"Timeout 60s Get SMS")      
+        em.wait(8)  
         verify_code_count = 0
         while True:
             sms_code = get_sms(activation_id)
@@ -990,7 +992,7 @@ class EmulatorView:
         self.update_device_status(device_id,"text_message_check_box")
         em.tap_img("templates/katana/text_message_check_box.png")
         
-        
+        self.update_device_status(device_id,"continue_text_message")
         em.tap_img("templates/katana/continue_text_message.png")
         
         
@@ -1009,11 +1011,13 @@ class EmulatorView:
             self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
             em.wait(2)
         
+        self.update_device_status(device_id,"last_sms_code")  
         em.tap_img("templates/katana/last_sms_code.png")
         em.wait(1)
         em.send_text(last_sms_code)
         em.wait(1)
         
+        self.update_device_status(device_id,"continue_text_message")  
         em.tap_img("templates/katana/continue_text_message.png")
         
         confirm_code_count = 0
@@ -1026,9 +1030,10 @@ class EmulatorView:
                 print("Code Received: "+ confirm_code)
                 break
             self.update_device_status(device_id,f"Waiting Verify Code: {confirm_code_count}")
-            em.wait(1)
+            em.tap_img("templates/katana/get_new_code.png",timeout=2)
+
         
-        
+        self.update_device_status(device_id,"enter_confirmation_code")  
         em.tap_img("templates/katana/enter_confirmation_code.png")
         em.wait(1)
         em.send_text(confirm_code)
@@ -1037,19 +1042,36 @@ class EmulatorView:
         self.update_device_status(device_id,"next_add_email")
         em.tap_img("templates/katana/next_add_email.png")
         
+        self.update_device_status(device_id,"close_add_mail")
         em.tap_img("templates/katana/close_add_mail.png")
         
+        self.update_device_status(device_id,"contact_info")
         em.tap_img("templates/katana/contact_info.png")
+        em.wait(1)
         
+        self.update_device_status(device_id,"phone_img")
         em.tap_img("templates/katana/phone_img.png")
         
+        self.update_device_status(device_id,"delete_number")
         em.tap_img("templates/katana/delete_number.png")
         
+        self.update_device_status(device_id,"confirm_delete_number")
         em.tap_img("templates/katana/confirm_delete_number.png")
         
-        em.wait_img("templates/katana/number_deleted.png")
         
-        em.wait(200)
+        em.wait_img("templates/katana/number_deleted.png")
+        self.update_device_status(device_id,"number_deleted")
+        
+        self.update_device_status(device_id,"Getting UID")
+        uid = em.extract_facebook_uid()
+        
+        self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
+        self.update_device_status(device_id,"Data Saved")
+        
+        finish_number(activation_id)
+        
+        
+        em.wait(5)
         
         
         

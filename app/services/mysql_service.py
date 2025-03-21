@@ -116,3 +116,30 @@ class MySQLService:
                 cursor.close()
             if connection:
                 connection.close()
+                
+    def save_user(self, uid, password, two_factor, email, pass_mail, acc_type):
+        """Insert a new user into the created_users table."""
+        connection = self.get_connection()
+        if not connection:
+            return False
+
+        query = """
+        INSERT INTO created_users 
+        (uid, password, two_factor, email, pass_mail, acc_type, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        """
+        params = (uid, password, two_factor, email, pass_mail, acc_type)
+
+        try:
+            cursor = connection.cursor()
+            cursor.execute(query, params)
+            connection.commit()
+            return True
+        except Error as e:
+            print(f"❌ Error saving user: {e}")
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()

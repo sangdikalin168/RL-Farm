@@ -339,42 +339,68 @@ class ADBController:
         print("🧹 Clearing Facebook app data...")
         self.run_adb_command(["-s", self.device_id, "shell", "pm", "clear", "com.facebook.katana"])  # Normal clear
 
-        if adb_root_status == "root":
-            self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/data/data/com.facebook.katana"], as_root=True)
-            self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/sdcard/Android/data/com.facebook.katana"], as_root=True)
+        # if adb_root_status == "root":
+        #     self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/data/data/com.facebook.katana"], as_root=True)
+        #     self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/sdcard/Android/data/com.facebook.katana"], as_root=True)
 
-        # ✅ Step 3: Spoof Device Identity (Fixed Argument Error)
-        print("🔄 Changing device identity...")
-        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "device_name", "\"Samsung Galaxy S23\""])
-        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "model", "\"SM-S911B\""])
-        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "manufacturer", "\"samsung\""])
-        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "brand", "\"samsung\""])
+        # # ✅ Step 3: Spoof Device Identity (Fixed Argument Error)
+        # print("🔄 Changing device identity...")
+        # self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "device_name", "\"Samsung Galaxy S23\""])
+        # self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "model", "\"SM-S911B\""])
+        # self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "manufacturer", "\"samsung\""])
+        # self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "global", "brand", "\"samsung\""])
 
-        if adb_root_status == "root":
-            self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "android_id", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
+        # if adb_root_status == "root":
+        #     self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "android_id", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
 
-        # ✅ Step 4: Reset Google Advertising ID (GAID)
-        print("🔄 Resetting Advertising ID...")
-        if adb_root_status == "root":
-            self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/data/data/com.google.android.gms/shared_prefs/adid_settings.xml"], as_root=True)
+        # # ✅ Step 4: Reset Google Advertising ID (GAID)
+        # print("🔄 Resetting Advertising ID...")
+        # if adb_root_status == "root":
+        #     self.run_adb_command(["-s", self.device_id, "shell", "rm", "-rf", "/data/data/com.google.android.gms/shared_prefs/adid_settings.xml"], as_root=True)
         
-        self.run_adb_command(["-s", self.device_id, "shell", "am", "broadcast", "-a", "com.google.android.gms.INITIALIZE"])
-        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "adb_enabled", "0"])
-        self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "adb_enabled", "1"])
+        # self.run_adb_command(["-s", self.device_id, "shell", "am", "broadcast", "-a", "com.google.android.gms.INITIALIZE"])
+        # self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "adb_enabled", "0"])
+        # self.run_adb_command(["-s", self.device_id, "shell", "settings", "put", "secure", "adb_enabled", "1"])
 
-        # ✅ Step 5: Spoof Network Identifiers (IMEI, MAC, Hostname) - Using Root Only If Available
-        print("🔄 Spoofing network identifiers...")
-        if adb_root_status == "root":
-            self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.serialno", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
-            self.run_adb_command(["-s", self.device_id, "shell", "setprop", "net.hostname", "android-$(date +%s%N | md5sum | cut -c 1-8)"], as_root=True)
-            self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.boot.wifimac", "$(cat /sys/class/net/wlan0/address | sed 's/://g')"], as_root=True)
-            self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.boot.btmacaddr", "$(cat /sys/class/net/bt0/address | sed 's/://g')"], as_root=True)
-        else:
-            print("⚠️ Warning: Root commands skipped due to missing `su`.")
+        # # ✅ Step 5: Spoof Network Identifiers (IMEI, MAC, Hostname) - Using Root Only If Available
+        # print("🔄 Spoofing network identifiers...")
+        # if adb_root_status == "root":
+        #     self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.serialno", "$(date +%s%N | md5sum | cut -c 1-16)"], as_root=True)
+        #     self.run_adb_command(["-s", self.device_id, "shell", "setprop", "net.hostname", "android-$(date +%s%N | md5sum | cut -c 1-8)"], as_root=True)
+        #     self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.boot.wifimac", "$(cat /sys/class/net/wlan0/address | sed 's/://g')"], as_root=True)
+        #     self.run_adb_command(["-s", self.device_id, "shell", "setprop", "ro.boot.btmacaddr", "$(cat /sys/class/net/bt0/address | sed 's/://g')"], as_root=True)
+        # else:
+        #     print("⚠️ Warning: Root commands skipped due to missing `su`.")
 
-        # ✅ Step 6: Restart Facebook Instead of Emulator
-        print("🔄 Restarting Facebook services...")
-        self.run_adb_command(["-s", self.device_id, "shell", "am", "force-stop", "com.facebook.katana"])
-        self.run_adb_command(["-s", self.device_id, "shell", "am", "start", "-n", "com.facebook.katana/.LoginActivity"])
+        # # ✅ Step 6: Restart Facebook Instead of Emulator
+        # print("🔄 Restarting Facebook services...")
+        # self.run_adb_command(["-s", self.device_id, "shell", "am", "force-stop", "com.facebook.katana"])
+        # self.run_adb_command(["-s", self.device_id, "shell", "am", "start", "-n", "com.facebook.katana/.LoginActivity"])
 
         print("✅ Facebook data cleared, identity spoofed, and app restarted successfully!")
+
+    def extract_facebook_uid(self):
+        """Runs adb root, reads Facebook's auth XML, and extracts the UID."""
+        print("🚀 Running adb root...")
+        self.run_adb_command(["root"])
+
+        print("📄 Reading msys-auth-data.xml...")
+        xml_content = self.run_adb_command([
+            "shell",
+            "cat",
+            "/data/data/com.facebook.katana/shared_prefs/msys-auth-data.xml"
+        ])
+
+        if not xml_content:
+            print("❌ Failed to read XML or file does not exist.")
+            return None
+
+        # Extract UID from the string name attribute
+        match = re.search(r'<string name="(\d+)-_rt_client_id"', xml_content)
+        if match:
+            uid = match.group(1)
+            print(f"✅ Extracted Facebook UID: {uid}")
+            return uid
+        else:
+            print("❌ UID not found in the XML.")
+            return None
