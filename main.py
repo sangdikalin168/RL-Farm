@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
-def center_window(window, width=450, height=800):
+def center_window(window, width=1800, height=700):
     """Center the application window on the screen."""
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
