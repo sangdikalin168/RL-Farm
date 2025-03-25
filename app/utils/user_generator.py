@@ -242,6 +242,10 @@ yandex_domains = [
     {"main_email": "sangdikalin@yandex.com", "pass_mail": "tmrabikharckqjmt"},
 ] 
 
+custom_domain = [
+    {"main_email": "jennahrubin69@gmail.com", "pass_mail": "vdme mtmz alnw rxuq", "domain_name": "rlfarm666.com"},
+]
+
 def generate_secure_password(length=12):
     # Define the character set to include only uppercase letters and digits
     characters = string.ascii_uppercase + string.digits
@@ -254,11 +258,20 @@ def generate_info(provider="zoho"):
     Generate a random user profile and email alias using the specified provider: "zoho" or "yandex".
     """
 
+    # Random name
+    while True:
+        first_name = names.get_first_name(gender='male')
+        last_name = names.get_last_name()
+        if first_name.isalpha() and last_name.isalpha():
+            break
+
     # Select domain list by provider
     if provider == "zoho":
         domain_list = zoho_domains
     elif provider == "yandex":
         domain_list = yandex_domains
+    elif provider == "custom":
+        domain_list = custom_domain
     else:
         raise ValueError("Unsupported provider. Choose 'zoho' or 'yandex'.")
 
@@ -269,14 +282,13 @@ def generate_info(provider="zoho"):
 
     # Generate alias
     random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    alias_email = f"{main_email.split('@')[0]}+{random_suffix}@{main_email.split('@')[1]}"
+    
+    if provider == "custom":
+        alias_email = f"{first_name.lower()}{last_name.lower()}{random_suffix}@{chosen_email["domain_name"]}"
+    else:
+        alias_email = f"{main_email.split('@')[0]}+{random_suffix}@{main_email.split('@')[1]}"
 
-    # Random name
-    while True:
-        first_name = names.get_first_name(gender='male')
-        last_name = names.get_last_name()
-        if first_name.isalpha() and last_name.isalpha():
-            break
+
 
     # US phone number
     ny_area_codes = [212, 718, 917, 646, 332, 347]
@@ -302,7 +314,7 @@ def generate_info(provider="zoho"):
 # # Example usage
 
 # if __name__ == "__main__":
-#     info = generate_info("yandex")
+#     info = generate_info("custom")
 
 #     # Unpacking dictionary keys into variables
 #     first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = info.values()

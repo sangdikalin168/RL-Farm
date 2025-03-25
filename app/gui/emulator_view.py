@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tkinter as tk
+from app.utils.email_service import get_domain_confirm_code
 from app.utils.five_sim import ban_number, cancel_activation, finish_number, get_available_number, get_latest_sms_code, get_sms
 from app.utils.user_generator import generate_info
 from app.utils.zoho import get_confirmation_code
@@ -117,10 +118,12 @@ class EmulatorView:
         
         self.yandex_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Yandex", variable=self.selected_mail, value="yandex", style="primary.TRadiobutton")
         self.yandex_checkbox.grid(row=0, column=1, sticky="w", padx=5)
+        
+        self.customer_email_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Custom", variable=self.selected_mail, value="custom", style="primary.TRadiobutton")
+        self.customer_email_checkbox.grid(row=0, column=2, sticky="w", padx=5)
 
-        # ✅ Katana Checkbox
         self.five_sim_checkbox = ttkb.Radiobutton(mode_selection_frame, text="5SIM", variable=self.selected_mail, value="five_sim", style="primary.TRadiobutton")
-        self.five_sim_checkbox.grid(row=0, column=2, sticky="w", padx=5)
+        self.five_sim_checkbox.grid(row=0, column=3, sticky="w", padx=5)
 
 
 
@@ -447,7 +450,6 @@ class EmulatorView:
         if selected_package == "com.facebook.katana":
             self.register_katana(device_id,selected_package)
             
-        
     def register_lite(self, device_id, selected_package):
         em = ADBController(device_id)  # ✅ Initialize ADBController for the device
         
@@ -465,6 +467,7 @@ class EmulatorView:
             self.update_device_status(device_id,"Meta Logo Not Found")
             em.wait(10)
             return
+        self.update_device_status(device_id,"Meta Logo Found")
         
         login_templates = em.detect_templates([
             "templates/lite/login_step/create_new_account.png",
@@ -646,14 +649,17 @@ class EmulatorView:
             em.wait(1)
             em.tap_img("templates/lite/next.png")
     
-        
+    
         
         verify_code_count = 0
         while True:
-            self.update_device_status(device_id,"Wait Confirmation Code")
-            code = get_confirmation_code(provider=self.selected_mail.get(),primary_email=main_email, alias_email=alias_email, password=pass_mail)
+            if self.selected_mail.get() != 'custom':
+                code = get_confirmation_code(provider=self.selected_mail.get(),primary_email=main_email, alias_email=alias_email, password=pass_mail)
+      
+            code = get_domain_confirm_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)    
+            
             verify_code_count += 1
-            if(verify_code_count == 30):
+            if(verify_code_count == 5):
                 return
             if str(code).isnumeric():
                 print("Code Received: "+ code)
@@ -680,8 +686,11 @@ class EmulatorView:
         
         em.wait_img("templates/lite/skip_add_profile.png")
         
-        self.update_device_status(device_id,"Goto Account Center")
+        
+        em.run_adb_command(["shell", "am", "force-stop", "com.facebook.lite"])
 
+        em.open_app(selected_package) 
+        
         # em.run_adb_command([
         #     "shell", "am", "start", 
         #     "-n", "com.facebook.lite/com.facebook.lite.MainActivity", 
@@ -700,12 +709,16 @@ class EmulatorView:
         self.update_device_status(device_id,uid)
         em.wait(3)
         
-        self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="No 2FA Yandex")
+        self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type=f"No 2FA {self.selected_mail.get()}")
         self.update_device_status(device_id,"Data Saved")
         em.wait(2)
         
     def register_katana(self, device_id, selected_package):
         em = ADBController(device_id)
+        
+        
+        em.randomize_device_fingerprint()
+        
         
         em.clear_facebook_data()
         
@@ -722,11 +735,12 @@ class EmulatorView:
         login_templates = em.detect_templates([
             "templates/katana/login_step/create_new_account.png",
             "templates/katana/login_step/create_new_account_1.png",
+            "templates/katana/login_step/create_new_account_2.png",
             "templates/katana/login_step/join_facebook.png",
             "templates/katana/login_step/sign_up.png",
             "templates/katana/login_step/create_new_account_blue.png",
             "templates/katana/login_step/get_started.png"
-        ])
+        ],timeout=120)
         
         
         if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
@@ -753,7 +767,7 @@ class EmulatorView:
             em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
         
         
-        first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info(provider=self.selected_mail).values()
+        first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info(provider=self.selected_mail.get()).values()
         
         
         self.update_device_status(device_id,"Input First Name")
@@ -927,7 +941,11 @@ class EmulatorView:
         
         verify_code_count = 0
         while True:
-            code = get_confirmation_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)
+            if self.selected_mail.get() != 'custom':
+                code = get_confirmation_code(provider=self.selected_mail.get(),primary_email=main_email, alias_email=alias_email, password=pass_mail)
+      
+            code = get_domain_confirm_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)    
+            
             verify_code_count += 1
             if(verify_code_count == 5):
                 return
