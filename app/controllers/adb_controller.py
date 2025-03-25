@@ -1,4 +1,5 @@
 import os
+import random
 import re
 import time
 import subprocess
@@ -323,6 +324,37 @@ class ADBController:
         """Simulates a swipe gesture on the device."""
         self.run_adb_command(["shell", "input", "swipe", str(start_x), str(start_y), str(end_x), str(end_y), str(duration)])
         
+    def randomize_device_fingerprint(self):
+        # Generate random Android ID
+        android_id = ''.join(random.choices('0123456789abcdef', k=16))
+        print(f"📱 Setting Android ID: {android_id}")
+        self.run_adb_command(["shell", "settings", "put", "secure", "android_id", android_id])
+
+        # Random Timezone
+        timezones = ["America/New_York", "Europe/London", "Asia/Tokyo", "Africa/Cairo"]
+        tz = random.choice(timezones)
+        print(f"🌍 Setting timezone: {tz}")
+        self.run_adb_command(["shell", "setprop", "persist.sys.timezone", tz])
+
+        # Random Locale
+        locales = ["en-US"]
+        locale = random.choice(locales)
+        lang, country = locale.split("-")
+        print(f"🌐 Setting locale: {locale}")
+        self.run_adb_command(["shell", "setprop", "persist.sys.locale", locale])
+        self.run_adb_command(["shell", "setprop", "persist.sys.language", lang])
+        self.run_adb_command(["shell", "setprop", "persist.sys.country", country])
+
+        # Clear WebView & Chrome
+        print("🧹 Clearing WebView and Chrome...")
+        self.run_adb_command(["shell", "pm", "clear", "com.google.android.webview"])
+        self.run_adb_command(["shell", "pm", "clear", "com.android.chrome"])
+
+        # Clear Play Services (to reset GAID)
+        print("🔄 Clearing Google Play Services...")
+        self.run_adb_command(["shell", "pm", "clear", "com.google.android.gms"])
+        print("✅ Device fingerprint randomized.\n")       
+        
     def clear_facebook_data(self):
         """🔥 Fully clear Facebook data and spoof device identity with proper root access."""
         print(f"🔥 Clearing Facebook data on {self.device_id}...")
@@ -389,6 +421,32 @@ class ADBController:
             "shell",
             "cat",
             "/data/data/com.facebook.katana/shared_prefs/msys-auth-data.xml"
+        ])
+
+        if not xml_content:
+            print("❌ Failed to read XML or file does not exist.")
+            return None
+
+        # Extract UID from the string name attribute
+        match = re.search(r'<string name="(\d+)-_rt_client_id"', xml_content)
+        if match:
+            uid = match.group(1)
+            print(f"✅ Extracted Facebook UID: {uid}")
+            return uid
+        else:
+            print("❌ UID not found in the XML.")
+            return None
+
+    def extract_lite_uid(self):
+        """Runs adb root, reads Facebook's auth XML, and extracts the UID."""
+        print("🚀 Running adb root...")
+        self.run_adb_command(["root"])
+
+        print("📄 Reading msys-auth-data.xml...")
+        xml_content = self.run_adb_command([
+            "shell",
+            "cat",
+            "/data/data/com.facebook.lite/shared_prefs/msys-auth-data.xml"
         ])
 
         if not xml_content:

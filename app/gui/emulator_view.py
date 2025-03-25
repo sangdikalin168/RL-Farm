@@ -20,8 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import tkinter as tk
 from app.utils.five_sim import ban_number, cancel_activation, finish_number, get_available_number, get_latest_sms_code, get_sms
 from app.utils.user_generator import generate_info
-
-from app.utils.zoho_api import get_confirmation_code
+from app.utils.zoho import get_confirmation_code
 from app.utils.zoho_generate import generate_zoho_info
 
 class EmulatorView:
@@ -452,16 +451,258 @@ class EmulatorView:
     def register_lite(self, device_id, selected_package):
         em = ADBController(device_id)  # ✅ Initialize ADBController for the device
         
+        em.randomize_device_fingerprint()
         em.run_adb_command(["shell", "pm", "clear", "com.facebook.lite"])
         
         em.open_app(selected_package)  # ✅ Open Facebook Lite app
         """Registers a new Facebook account using ADB commands."""
         print(f"📲 Registering Facebook on {device_id}...")
         
-        self.update_device_status(device_id, "create_new_account")
-        em.tap_img("templates/lite/create_new_account.png")
+        self.update_device_status(device_id,"Waiting Meta Logo")
+        meta_logo = em.wait_img("templates/lite/meta_logo.png")
+
+        if( meta_logo == False):
+            self.update_device_status(device_id,"Meta Logo Not Found")
+            em.wait(10)
+            return
         
-        em.wait(500)
+        login_templates = em.detect_templates([
+            "templates/lite/login_step/create_new_account.png",
+            "templates/lite/login_step/create_new_account_1.png",
+            # "templates/lite/login_step/join_facebook.png",
+            # "templates/lite/login_step/sign_up.png",
+            # "templates/lite/login_step/create_new_account_blue.png",
+            # "templates/lite/login_step/get_started.png"
+        ])
+        
+        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
+            self.update_device_status(device_id,"Create New Account")
+            em.tap(270.0,857.9)
+        
+        
+        if "create_new_account_blue.png" in login_templates:
+            self.update_device_status(device_id,"Create New Account Blue")
+            em.tap_img("templates/lite/login_step/create_new_account_blue.png")
+        
+        if "get_started.png" in login_templates:
+            self.update_device_status(device_id,"Get Started")
+            em.tap_img("templates/lite/get_started.png")
+        
+        
+        detect_last_name_or_get_started = em.detect_templates(
+            [
+                "templates/lite/get_started.png",
+                "templates/lite/no_create_account.png",
+                "templates/lite/create_new_account.png",
+                "templates/lite/last_name.png",
+                "templates/lite/yes_create_account.png",
+            ]
+        )
+        
+        self.update_device_status(device_id,"Input Last Name or Get Started")
+        if 'last_name.png' in detect_last_name_or_get_started:
+            self.update_device_status(device_id,"Input Last Name")
+        else:
+            self.update_device_status(device_id,"Input Last Name")
+            em.tap_imgs(["templates/lite/get_started.png","templates/lite/no_create_account.png","templates/lite/create_new_account.png","templates/lite/yes_create_account.png"])
+        
+        
+        first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info(provider=self.selected_mail.get()).values()
+        
+        self.update_device_status(device_id,"Input First Name")
+        em.wait(1)
+        em.send_text(first_name)
+        
+        em.tap_img("templates/lite/last_name.png")
+        self.update_device_status(device_id,"Input Last Name")
+        em.wait(1)
+        em.send_text(last_name)
+        em.wait(1)
+        
+        em.tap_img("templates/lite/next.png")
+        self.update_device_status(device_id,"Next")
+        
+        
+        em.tap_img("templates/lite/cancel_date.png")
+        
+        em.tap_img("templates/lite/next.png")
+        em.tap_img("templates/lite/next.png")
+        
+        
+        em.wait_img("templates/lite/how_old_are_you.png")
+        
+        em.wait(1)
+        em.send_text(29)
+        
+        em.tap_img("templates/lite/next.png")
+        self.update_device_status(device_id,"Next")
+        
+        em.tap_img("templates/lite/ok_birthday.png")
+        
+        
+        em.tap_img("templates/lite/male.png")
+        
+        em.tap_img("templates/lite/next.png")
+        self.update_device_status(device_id,"Next")
+        
+        detected_sign_up = em.detect_templates(["templates/lite/what_is_your_email.png", "templates/lite/mobile_number.png","templates/lite/mobile_number_cursor.png"])
+        
+        if "what_is_your_email.png" in detected_sign_up:
+            self.update_device_status(device_id, "Sign Up With Email")
+            em.tap_img("templates/lite/sign_up_with_phone.png")
+            em.tap_img("templates/lite/mobile_number.png",timeout=5)
+            em.send_text(phone_number)
+            em.wait(1)
+            
+            
+        if "mobile_number.png" in detected_sign_up or  "mobile_number_cursor.png" in detected_sign_up:
+            em.tap_img("templates/lite/mobile_number.png",timeout=5)
+            self.update_device_status(device_id,"Set Phone")
+            em.send_text(phone_number)
+            em.wait(1)
+            
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/lite/next.png")
+
+        continue_create_account = em.detect_templates(["templates/lite/continue_create_account.png", "templates/lite/eye_img.png","templates/lite/password_textbox.png"])
+        
+        if 'continue_create_account.png' in continue_create_account:
+            em.tap_img("templates/lite/continue_create_account.png")
+        
+        self.update_device_status(device_id,"Wait Password Textbox")
+        if 'eye_img.png' in continue_create_account:
+            self.update_device_status(device_id,"Password Textbox Found")
+
+        if 'password_textbox.png' in continue_create_account:
+            self.update_device_status(device_id,"Click Password Textbox")
+            em.tap_img("templates/lite/password_textbox.png")
+
+        em.wait(1)
+        em.send_text(password)
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/lite/next.png")
+        
+        self.update_device_status(device_id,"save")
+        em.tap_img("templates/lite/save.png")
+        
+        self.update_device_status(device_id,"Detect Logged Account")
+        detect_logged_as = em.detect_templates(["templates/lite/logged_as.png","templates/lite/agree.png"])
+        if "logged_as.png" in detect_logged_as:
+            self.update_device_status(device_id,"logged_as")
+            em.wait(3)
+            return
+        
+        if 'agree.png' in detect_logged_as:
+            self.update_device_status(device_id,"agree")
+            em.tap_img("templates/lite/agree.png")
+            
+            
+        detected_t1 = em.detect_templates(
+            [
+                "templates/lite/cannot_create_account.png",
+                "templates/lite/we_need_more_info.png",
+                "templates/lite/i_dont_get_code.png",
+                "templates/lite/make_sure.png",
+                "templates/lite/before_send.png",
+                "templates/lite/confirm_by_email_lite.png",
+            ]
+        )
+        
+        self.update_device_status(device_id,"Detect Spam")
+        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
+            self.update_device_status(device_id,"Spam Device")
+            return
+        
+        if "make_sure.png" in detected_t1:
+            self.update_device_status(device_id,"Make Sure Device")
+            em.tap_img("templates/lite/continue.png")
+        
+        if "before_send.png" in detected_t1:
+            self.update_device_status(device_id,"try_another_way")
+            em.tap_img("templates/lite/try_another_way.png")
+            
+            self.update_device_status(device_id,"confirm_by_email")
+            em.tap_img("templates/lite/confirm_by_email.png")
+            skip_idont_get_code = True
+        
+        if "confirm_by_email_lite.png" in detected_t1:
+            em.tap_img("templates/lite/confirm_by_email_lite.png")
+            self.update_device_status(device_id,"email_textbox")
+            em.tap_img("templates/lite/email_textbox.png")
+            
+            em.wait(1)
+            em.send_text(alias_email)
+            self.update_device_status(device_id,"next_email")
+            em.tap_img("templates/lite/next_email.png")
+
+        if "i_dont_get_code.png" in detected_t1:
+            self.update_device_status(device_id,"i_dont_get_code")
+            em.tap_img("templates/lite/i_dont_get_code.png")
+            em.tap_img("templates/lite/confirm_by_email.png")
+            
+            em.send_text(alias_email)
+            em.wait(1)
+            em.tap_img("templates/lite/next.png")
+    
+        
+        
+        verify_code_count = 0
+        while True:
+            self.update_device_status(device_id,"Wait Confirmation Code")
+            code = get_confirmation_code(provider=self.selected_mail.get(),primary_email=main_email, alias_email=alias_email, password=pass_mail)
+            verify_code_count += 1
+            if(verify_code_count == 30):
+                return
+            if str(code).isnumeric():
+                print("Code Received: "+ code)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
+            em.wait(1)
+            
+        if "i_dont_get_code.png" in detected_t1:
+            em.send_text(code)
+            em.wait("templates/lite/next.png")  
+
+        if "confirm_by_email_lite.png" in detected_t1:
+            self.update_device_status(device_id,"click confirm_code_textbox")
+            em.tap_img("templates/lite/confirm_code_textbox.png")
+            em.wait(2)
+            
+            for char in code:
+                em.send_text(char)
+                em.wait(0.2)
+            
+            em.wait(1)
+            
+            em.tap_img("templates/lite/ok_confirm_code.png")
+        
+        em.wait_img("templates/lite/skip_add_profile.png")
+        
+        self.update_device_status(device_id,"Goto Account Center")
+
+        # em.run_adb_command([
+        #     "shell", "am", "start", 
+        #     "-n", "com.facebook.lite/com.facebook.lite.MainActivity", 
+        #     "-a", "android.intent.action.VIEW", 
+        #     "-d", "https://accountscenter.facebook.com/personal_info/contact_points"
+        # ])
+
+        detect_appeal = em.detect_templates(["templates/lite/appeal.png"])
+        if "appeal.png" in detect_appeal:
+            self.update_device_status(device_id,"appeal")
+            em.wait(3)
+            return
+        
+        uid = em.extract_lite_uid()
+        
+        self.update_device_status(device_id,uid)
+        em.wait(3)
+        
+        self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="No 2FA Yandex")
+        self.update_device_status(device_id,"Data Saved")
+        em.wait(2)
         
     def register_katana(self, device_id, selected_package):
         em = ADBController(device_id)
@@ -501,7 +742,6 @@ class EmulatorView:
             self.update_device_status(device_id,"Get Started")
             em.tap_img("templates/katana/get_started.png")
 
-        
         
         detect_last_name_or_get_started = em.detect_templates(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png","templates/katana/last_name.png"])
         

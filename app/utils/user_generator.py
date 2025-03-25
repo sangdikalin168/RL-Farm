@@ -239,11 +239,7 @@ zoho_domains  = [
 ]
 
 yandex_domains = [
-    {"main_email": "eth.05@yandex.com", "pass_mail": "rmymzyalkgqageko"},
-    {"main_email": "eth570@yandex.com", "pass_mail": "eiixxsokpzimbhhc"},
-    {"main_email": "xrp05@yandex.com", "pass_mail": "jemkbsquucsaljjf"},
-    {"main_email": "exrp.570@yandex.com", "pass_mail": "jvuqrvxsnhxirvps"},
-    {"main_email": "sangdykalin@yandex.com", "pass_mail": "riyoqmlgurmwlvxj"},
+    {"main_email": "sangdikalin@yandex.com", "pass_mail": "tmrabikharckqjmt"},
 ] 
 
 def generate_secure_password(length=12):

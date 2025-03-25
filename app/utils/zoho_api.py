@@ -78,7 +78,7 @@ def delete_message(accountId, folderId, messageId):
     else:
         print(f"Failed to delete message. Status code: {response.status_code}, Response: {response.text}")
 
-def get_security_code(recipient_email):
+def zoho_api_get_security_code(recipient_email):
     global access_token
     if is_access_token_expired():
         refresh_access_token()
@@ -159,7 +159,7 @@ def extract_confirmation_code(email_data, recipient_email):
     print("No confirmation code found.")
     return None  # Return None if no matching email is found
 
-def get_confirmation_code(recipient_email):
+def zoho_api_get_confirmation_code(recipient_email):
     global access_token
     if is_access_token_expired():
         refresh_access_token()
