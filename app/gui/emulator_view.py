@@ -22,6 +22,7 @@ from app.utils.email_service import get_domain_confirm_code
 from app.utils.five_sim import ban_number, cancel_activation, finish_number, get_available_number, get_latest_sms_code, get_sms
 from app.utils.user_generator import generate_info
 from app.utils.zoho import get_confirmation_code
+from app.utils.zoho_api import zoho_api_get_confirmation_code
 from app.utils.zoho_generate import generate_zoho_info
 
 class EmulatorView:
@@ -831,8 +832,9 @@ class EmulatorView:
         em.send_text(last_name)
         em.wait(1)
         
+        self.update_device_status(device_id,"Next Name")
         em.tap_img("templates/katana/next.png")
-        self.update_device_status(device_id,"Next")
+        
         
         invalid_name = em.detect_templates(
             [
@@ -860,12 +862,14 @@ class EmulatorView:
             em.wait(1)  
             em.tap(265.1,316.5)  
 
+
+        self.update_device_status(device_id,"Wait Set Date")
+        em.wait_img("templates/katana/set_date.png")
+
         # Generate random birthdate
         year_random = random.randint(27, 35)
         month_random = random.randint(20, 40)
         day_random = random.randint(10, 30)
-        
-        
         
         
         self.update_device_status(device_id,"set year")
@@ -1112,6 +1116,34 @@ class EmulatorView:
         
         self.update_device_status(device_id,"Next Name")
         em.tap_img("templates/katana/next.png")
+        
+        
+        invalid_name = em.detect_templates(
+            [
+                "templates/katana/invalid.png", 
+                "templates/katana/wrong_name.png",
+                "templates/katana/set_date.png"
+            ]
+        )
+        
+        
+        if "invalid.png" in invalid_name:
+            self.update_device_status(device_id,"Invalid Name")
+            em.wait(1)
+            return
+        
+        if "wrong_name.png" in invalid_name:
+            self.update_device_status(device_id,"Invalid First Name")
+            em.tap_img("templates/katana/wrong_name.png")
+            em.wait(1)
+            em.send_text(first_name)
+            em.wait(1)
+            em.tap_img("templates/katana/next.png")
+            em.wait(3)
+            em.tap(265.1,316.5)
+            em.wait(1)  
+            em.tap(265.1,316.5)  
+
         
         
         self.update_device_status(device_id,"Wait Set Date")
@@ -1364,7 +1396,7 @@ class EmulatorView:
         
         confirm_code_count = 0
         while True:
-            confirm_code = get_confirmation_code(recipient_email=email)
+            confirm_code = zoho_api_get_confirmation_code(email)
             confirm_code_count += 1
             if(confirm_code_count == 30):
                 return
