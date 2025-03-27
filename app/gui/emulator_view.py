@@ -224,27 +224,28 @@ class EmulatorView:
         """Start MuMuPlayer for all checked players, but skip already running ones."""
         selected_players = set()  # Use a set to prevent duplicates
 
-        # ✅ Get checked emulators from TreeView
+        # Loop through all rows in the TreeView
         for item_id in self.emulator_tree.get_children():
             values = self.emulator_tree.item(item_id, "values")
-            checkbox_state = values[0]  # ✅ Checkbox state
-            display_no = int(values[1])  # ✅ "No" column (starts from 1)
-            status = values[3]  # ✅ Status column (Running or Not Running)
+            checkbox_state = values[0]  # "☑" or "☐"
+            display_no = int(values[1])  # "No" column; assuming it’s already the correct index
+            status = values[3]  # Status column ("Running" or not)
 
+            # Only add if the checkbox is checked and the emulator is not running
             if checkbox_state == "☑" and status != "Running":
-                actual_index = display_no - 1  # ✅ Convert "No" to real index
-                selected_players.add(actual_index)  # ✅ Prevent duplicates
+                actual_index = display_no  # Use the number directly without subtracting 1
+                selected_players.add(actual_index)
 
         if not selected_players:
             messagebox.showwarning("Selection Error", "No players selected or all are already running!")
             return
 
-        # ✅ Start selected emulators in parallel
-        with ThreadPoolExecutor(max_workers=30) as executor:  # ✅ Use 5 workers to prevent overload
+        # Start selected emulators in parallel
+        with ThreadPoolExecutor(max_workers=30) as executor:
             results = list(executor.map(self.emulator.start_emulator, selected_players))
-
-        # ✅ Refresh emulator list after starting
-        self.master.after(2000, self.load_players)  # ✅ Delayed refresh to update status
+        
+        # Refresh emulator list after starting
+        self.master.after(2000, self.load_players)
 
     def _get_treeview_item_by_no(self, no):
         """Find the TreeView item ID using the 'No' column."""
@@ -1026,16 +1027,28 @@ class EmulatorView:
         login_templates = em.detect_templates([
             "templates/katana/login_step/create_new_account.png",
             "templates/katana/login_step/create_new_account_1.png",
+            "templates/katana/login_step/create_new_account_2.png",
             "templates/katana/login_step/join_facebook.png",
             "templates/katana/login_step/sign_up.png",
             "templates/katana/login_step/create_new_account_blue.png",
             "templates/katana/login_step/get_started.png"
         ])
         
+        login_temp = [
+            "templates/katana/login_step/create_new_account.png",
+            "templates/katana/login_step/create_new_account_1.png",
+            "templates/katana/login_step/create_new_account_2.png",
+            "templates/katana/login_step/join_facebook.png",
+            "templates/katana/login_step/sign_up.png",
+            "templates/katana/login_step/create_new_account_blue.png",
+            "templates/katana/login_step/get_started.png"
+        ]
         
-        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
+        
+        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or 'create_new_account_2.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
             self.update_device_status(device_id,"Create New Account")
-            em.tap(270.0,857.9)
+            em.wait(2)
+            em.tap_imgs(login_temp)
         
         
         if "create_new_account_blue.png" in login_templates:

@@ -349,14 +349,6 @@ class MuMuPlayerController:
         print("✅ Facebook data cleared, identity spoofed, and app restarted successfully!")
 
     def find_vm_config_files(self,vms_path):
-        # """Find all vm_config.json files inside dynamically detected emulator folders."""
-        # config_files = []
-        # for folder in os.listdir(vms_path):
-        #     folder_path = os.path.join(vms_path, folder, 'configs')
-        #     config_file = os.path.join(folder_path, 'vm_config.json')
-        #     if os.path.exists(config_file):
-        #         config_files.append(config_file)
-        # return config_files
         """Find all vm_config.json files inside dynamically detected emulator folders."""
         config_files = []
         for folder in os.listdir(vms_path):
