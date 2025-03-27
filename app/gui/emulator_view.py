@@ -730,12 +730,6 @@ class EmulatorView:
             ]
         ,timeout=10)
         
-        #insert data to database
-        
-        
-        
-        
-        
         if "something_went_wrong.png" in detect_wrong:
             self.update_device_status(device_id,"Something Went Wrong")
             em.wait(2)
@@ -745,6 +739,7 @@ class EmulatorView:
         if "confirm_skip_contact.png" in detect_wrong: 
             em.tap_img("templates/lite/confirm_skip_contact.png")
 
+        self.update_device_status(device_id,"Detecting 180Days")
         detect_appeal = em.detect_templates(["templates/lite/appeal.png","templates/lite/something_went_wrong.png"],timeout=15)
         if "appeal.png" in detect_appeal:
             self.update_device_status(device_id,"appeal")
