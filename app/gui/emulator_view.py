@@ -545,9 +545,6 @@ class EmulatorView:
             em.wait(1)
             em.tap_img("templates/lite/next.png")
             em.wait(3)
-            em.tap(265.1,316.5)
-            em.wait(1)  
-            em.tap(265.1,316.5)
         
         if "set_date.png" in invalid_name:
             self.update_device_status(device_id,"Set Age")
@@ -556,6 +553,7 @@ class EmulatorView:
         em.tap_img("templates/lite/cancel_date.png")
         
         em.tap_img("templates/lite/next.png")
+        em.wait(1)
         em.tap_img("templates/lite/next.png")
         
         
