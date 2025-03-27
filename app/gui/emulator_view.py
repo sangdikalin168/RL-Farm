@@ -91,7 +91,7 @@ class EmulatorView:
         
                 # ✅ Select All Button
         self.select_all_button = ttkb.Button(button_frame, text="Select All", command=self.toggle_select_all, style="primary.TButton")
-        self.select_all_button.grid(row=0, column=6, padx=5, pady=5, sticky="w")
+        self.select_all_button.grid(row=0, column=6, padx=5, pady=5, sticky="nsew")
 
         # ✅ Frame for Mode Selection Checkboxes with Border
         register_frame = ttkb.Labelframe(button_frame, text="FB Selection", padding=5)
