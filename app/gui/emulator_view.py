@@ -472,13 +472,14 @@ class EmulatorView:
         login_templates = em.detect_templates([
             "templates/lite/login_step/create_new_account.png",
             "templates/lite/login_step/create_new_account_1.png",
-            # "templates/lite/login_step/join_facebook.png",
-            # "templates/lite/login_step/sign_up.png",
-            # "templates/lite/login_step/create_new_account_blue.png",
-            # "templates/lite/login_step/get_started.png"
+            "templates/lite/login_step/create_new_account_2.png",
+            "templates/lite/login_step/join_facebook.png",
+            "templates/lite/login_step/sign_up.png",
+            "templates/lite/login_step/create_new_account_blue.png",
+            "templates/lite/login_step/get_started.png"
         ])
         
-        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
+        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or 'create_new_account_2.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
             self.update_device_status(device_id,"Create New Account")
             em.tap(270.0,857.9)
         
@@ -525,6 +526,32 @@ class EmulatorView:
         em.tap_img("templates/lite/next.png")
         self.update_device_status(device_id,"Next")
         
+        invalid_name = em.detect_templates([
+            "templates/lite/invalid.png", 
+            "templates/lite/wrong_name.png",
+            "templates/lite/set_date.png"])
+        
+        
+        if "invalid.png" in invalid_name:
+            self.update_device_status(device_id,"Invalid Name")
+            em.wait(1)
+            return
+        
+        if "wrong_name.png" in invalid_name:
+            self.update_device_status(device_id,"Invalid First Name")
+            em.tap_img("templates/lite/wrong_name.png")
+            em.wait(1)
+            em.send_text(first_name)
+            em.wait(1)
+            em.tap_img("templates/lite/next.png")
+            em.wait(3)
+            em.tap(265.1,316.5)
+            em.wait(1)  
+            em.tap(265.1,316.5)
+        
+        if "set_date.png" in invalid_name:
+            self.update_device_status(device_id,"Set Age")
+            
         
         em.tap_img("templates/lite/cancel_date.png")
         
@@ -539,6 +566,8 @@ class EmulatorView:
         
         em.tap_img("templates/lite/next.png")
         self.update_device_status(device_id,"Next")
+        em.wait(2)
+        em.tap_img("templates/lite/next.png")
         
         em.tap_img("templates/lite/ok_birthday.png")
         
@@ -628,7 +657,7 @@ class EmulatorView:
             
             self.update_device_status(device_id,"confirm_by_email")
             em.tap_img("templates/lite/confirm_by_email.png")
-            skip_idont_get_code = True
+
         
         if "confirm_by_email_lite.png" in detected_t1:
             em.tap_img("templates/lite/confirm_by_email_lite.png")
@@ -643,6 +672,7 @@ class EmulatorView:
         if "i_dont_get_code.png" in detected_t1:
             self.update_device_status(device_id,"i_dont_get_code")
             em.tap_img("templates/lite/i_dont_get_code.png")
+            
             em.tap_img("templates/lite/confirm_by_email.png")
             
             em.send_text(alias_email)
@@ -653,13 +683,13 @@ class EmulatorView:
         
         verify_code_count = 0
         while True:
-            if self.selected_mail.get() != 'custom':
-                code = get_confirmation_code(provider=self.selected_mail.get(),primary_email=main_email, alias_email=alias_email, password=pass_mail)
-      
-            code = get_domain_confirm_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)    
-            
+            if self.selected_mail.get() == 'custom':
+                code = get_domain_confirm_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)
+            else:
+                code = get_confirmation_code(provider=self.selected_mail.get(), primary_email=main_email, alias_email=alias_email, password=pass_mail)  
+                  
             verify_code_count += 1
-            if(verify_code_count == 5):
+            if(verify_code_count == 30):
                 return
             if str(code).isnumeric():
                 print("Code Received: "+ code)
@@ -683,22 +713,39 @@ class EmulatorView:
             em.wait(1)
             
             em.tap_img("templates/lite/ok_confirm_code.png")
+                
+        self.update_device_status(device_id,"skip_add_profile")
+        em.tap_img("templates/lite/skip_add_profile.png")
         
-        em.wait_img("templates/lite/skip_add_profile.png")
+        em.wait(2)
+        self.update_device_status(device_id,"skip_turn_on_contact")
+        em.tap_img("templates/lite/skip_turn_on_contact.png")
         
         
-        em.run_adb_command(["shell", "am", "force-stop", "com.facebook.lite"])
+        
+        detect_wrong = em.detect_templates(
+            [
+                "templates/lite/something_went_wrong.png",
+                "templates/lite/confirm_skip_contact.png"
+            ]
+        ,timeout=10)
+        
+        #insert data to database
+        
+        
+        
+        
+        
+        if "something_went_wrong.png" in detect_wrong:
+            self.update_device_status(device_id,"Something Went Wrong")
+            em.wait(2)
+            em.run_adb_command(["shell", "am", "force-stop", "com.facebook.lite"])
+            em.open_app(selected_package)
+        
+        if "confirm_skip_contact.png" in detect_wrong: 
+            em.tap_img("templates/lite/confirm_skip_contact.png")
 
-        em.open_app(selected_package) 
-        
-        # em.run_adb_command([
-        #     "shell", "am", "start", 
-        #     "-n", "com.facebook.lite/com.facebook.lite.MainActivity", 
-        #     "-a", "android.intent.action.VIEW", 
-        #     "-d", "https://accountscenter.facebook.com/personal_info/contact_points"
-        # ])
-
-        detect_appeal = em.detect_templates(["templates/lite/appeal.png"])
+        detect_appeal = em.detect_templates(["templates/lite/appeal.png","templates/lite/something_went_wrong.png"],timeout=15)
         if "appeal.png" in detect_appeal:
             self.update_device_status(device_id,"appeal")
             em.wait(3)
@@ -743,7 +790,7 @@ class EmulatorView:
         ],timeout=120)
         
         
-        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
+        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or 'create_new_account_2.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
             self.update_device_status(device_id,"Create New Account")
             em.tap(270.0,857.9)
         
@@ -1034,28 +1081,7 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         self.update_device_status(device_id,"Next")
         
-        invalid_name = em.detect_templates([
-            "templates/katana/invalid.png", 
-            "templates/katana/wrong_name.png",
-            "templates/katana/set_date.png"])
-        
-        
-        if "invalid.png" in invalid_name:
-            self.update_device_status(device_id,"Invalid Name")
-            em.wait(1)
-            return
-        
-        if "wrong_name.png" in invalid_name:
-            self.update_device_status(device_id,"Invalid First Name")
-            em.tap_img("templates/katana/wrong_name.png")
-            em.wait(1)
-            em.send_text(first_name)
-            em.wait(1)
-            em.tap_img("templates/katana/next.png")
-            em.wait(3)
-            em.tap(265.1,316.5)
-            em.wait(1)  
-            em.tap(265.1,316.5)  
+
 
         # Generate random birthdate
         year_random = random.randint(27, 35)

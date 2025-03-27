@@ -3,6 +3,9 @@ import email
 import re
 from email.header import decode_header
 
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
 def get_domain_confirm_code(primary_email, password, alias_email):
     # Connect to Gmail
     mail = imaplib.IMAP4_SSL("imap.gmail.com")
@@ -23,7 +26,7 @@ def get_domain_confirm_code(primary_email, password, alias_email):
     )
 
     # Loop through recent messages (e.g., last 20)
-    for eid in reversed(email_ids[-20:]):
+    for eid in reversed(email_ids[-10:]):
         status, data = mail.fetch(eid, "(RFC822)")
         if status != "OK":
             continue
@@ -69,10 +72,10 @@ def get_domain_confirm_code(primary_email, password, alias_email):
     print(f"❌ No Facebook code found for {alias_email} in subjects.")
     return None
 
-# # Example usage:
+# # # Example usage:
 # gmail_address = "jennahrubin69@gmail.com"
 # app_password = "vdme mtmz alnw rxuq"
-# alias = "johnburrussnpe5f6yj@rlfarm666.com"
+# alias = "reginaldzenovm7sam79@rlfarm666.com"
 
 # code = get_domain_confirm_code(gmail_address, app_password, alias)
 # print("Code:", code)
