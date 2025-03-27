@@ -757,9 +757,7 @@ class EmulatorView:
     def register_katana(self, device_id, selected_package):
         em = ADBController(device_id)
         
-        
         em.randomize_device_fingerprint()
-        
         
         em.clear_facebook_data()
         
@@ -775,8 +773,6 @@ class EmulatorView:
         
         login_templates = em.detect_templates([
             "templates/katana/login_step/create_new_account.png",
-            "templates/katana/login_step/create_new_account_1.png",
-            "templates/katana/login_step/create_new_account_2.png",
             "templates/katana/login_step/join_facebook.png",
             "templates/katana/login_step/sign_up.png",
             "templates/katana/login_step/create_new_account_blue.png",
@@ -784,10 +780,17 @@ class EmulatorView:
         ],timeout=120)
         
         
-        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or 'create_new_account_2.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
-            self.update_device_status(device_id,"Create New Account")
-            em.tap(270.0,857.9)
+        login_img = [
+            "templates/katana/login_step/create_new_account.png",
+            "templates/katana/login_step/join_facebook.png",
+            "templates/katana/login_step/sign_up.png",
+            "templates/katana/login_step/create_new_account_blue.png"
+        ]
         
+        if "create_new_account.png" in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
+            self.update_device_status(device_id,"Create Account Btn Found")
+            em.wait(2)
+            em.tap_imgs(login_img)
         
         if "create_new_account_blue.png" in login_templates:
             self.update_device_status(device_id,"Create New Account Blue")
@@ -804,7 +807,7 @@ class EmulatorView:
         if 'last_name.png' in detect_last_name_or_get_started:
             self.update_device_status(device_id,"Input Last Name")
         else:
-            self.update_device_status(device_id,"Input Last Name")
+            self.update_device_status(device_id,"Get Started")
             em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
         
         
@@ -812,7 +815,7 @@ class EmulatorView:
         
         
         self.update_device_status(device_id,"Input First Name")
-        em.wait(1)
+        em.wait(2)
         em.send_text(first_name)
         
         em.tap_img("templates/katana/last_name.png")
@@ -824,10 +827,13 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         self.update_device_status(device_id,"Next")
         
-        invalid_name = em.detect_templates([
-            "templates/katana/invalid.png", 
-            "templates/katana/wrong_name.png",
-            "templates/katana/set_date.png"])
+        invalid_name = em.detect_templates(
+            [
+                "templates/katana/invalid.png", 
+                "templates/katana/wrong_name.png",
+                "templates/katana/set_date.png"
+            ]
+        )
         
         
         if "invalid.png" in invalid_name:
@@ -899,7 +905,7 @@ class EmulatorView:
             em.wait(1)
             
         
-        self.update_device_status(device_id,"Next")
+        self.update_device_status(device_id,"Next Phone")
         em.tap_img("templates/katana/next.png")
 
         continue_create_account = em.detect_templates(["templates/katana/continue_create_account.png", "templates/katana/eye_img.png","templates/katana/password_textbox.png"])
@@ -982,13 +988,14 @@ class EmulatorView:
         
         verify_code_count = 0
         while True:
-            if self.selected_mail.get() != 'custom':
-                code = get_confirmation_code(provider=self.selected_mail.get(),primary_email=main_email, alias_email=alias_email, password=pass_mail)
-      
-            code = get_domain_confirm_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)    
-            
+            if self.selected_mail.get() == 'custom':
+                code = get_domain_confirm_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)
+            else:
+                code = get_confirmation_code(provider=self.selected_mail.get(), primary_email=main_email, alias_email=alias_email, password=pass_mail)  
+                  
             verify_code_count += 1
-            if(verify_code_count == 5):
+            
+            if(verify_code_count == 20):
                 return
             if str(code).isnumeric():
                 print("Code Received: "+ code)
@@ -1003,11 +1010,23 @@ class EmulatorView:
         self.update_device_status(device_id,"skip_add_profile")
         em.tap_img("templates/katana/skip_add_profile.png")
         
-        detect_appeal = em.detect_templates(["templates/katana/appeal.png"])
-        if "appeal.png" in detect_appeal:
+        self.update_device_status(device_id,"Goto Personal Info")
+        em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
+    
+        detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
+        if "appeal.png" in detect_appeal1:
             self.update_device_status(device_id,"appeal")
             em.wait(3)
             return
+        
+        
+        self.update_device_status(device_id,"Getting UID")
+        uid = em.extract_facebook_uid()
+        self.update_device_status(device_id,uid)
+        em.wait(2)
+        
+        self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="No 2FA")
+        self.update_device_status(device_id,"Data Saved")
         
     def register_five_sim(self, device_id, selected_package):
         em = ADBController(device_id)

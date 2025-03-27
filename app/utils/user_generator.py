@@ -1,4 +1,5 @@
 import random
+import re
 import secrets
 import string
 import names
@@ -253,17 +254,32 @@ def generate_secure_password(length=12):
     password = ''.join(secrets.choice(characters) for _ in range(length))
     return password
 
+def is_human_name(name):
+    """
+    Returns True if the name matches a pattern for common human names.
+    Allowed names: Only letters, and optionally a single hyphen or apostrophe between parts.
+    Examples of valid names: John, Anne-Marie, O'Connor.
+    """
+    # The regex:
+    #   [A-Za-z]+           -> One or more letters
+    #   (?:[-'][A-Za-z]+)*  -> Zero or more groups starting with a hyphen or apostrophe followed by letters
+    pattern = r"^[A-Za-z]+(?:[-'][A-Za-z]+)*$"
+    return re.fullmatch(pattern, name) is not None
+
+
 def generate_info(provider="zoho"):
     """
     Generate a random user profile and email alias using the specified provider: "zoho" or "yandex".
     """
 
     # Random name
+    # Generate names until both first and last names are "human"
     while True:
-        first_name = names.get_first_name(gender='male')
+        first_name = names.get_first_name(gender='male')  # or remove gender parameter to randomize gender
         last_name = names.get_last_name()
-        if first_name.isalpha() and last_name.isalpha():
+        if is_human_name(first_name) and is_human_name(last_name):
             break
+
 
     # Select domain list by provider
     if provider == "zoho":
