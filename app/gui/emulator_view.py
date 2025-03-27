@@ -755,6 +755,13 @@ class EmulatorView:
         em.wait(2)
         
     def register_katana(self, device_id, selected_package):
+        
+        if self.selected_mail.get() == "five_sim":
+            print("Five Sim Mode")
+            self.register_five_sim(device_id,selected_package)
+            return
+        
+        
         em = ADBController(device_id)
         
         em.randomize_device_fingerprint()
@@ -1103,10 +1110,12 @@ class EmulatorView:
         em.send_text(last_name)
         em.wait(1)
         
+        self.update_device_status(device_id,"Next Name")
         em.tap_img("templates/katana/next.png")
-        self.update_device_status(device_id,"Next")
         
-
+        
+        self.update_device_status(device_id,"Wait Set Date")
+        em.wait_img("templates/katana/set_date.png")
 
         # Generate random birthdate
         year_random = random.randint(27, 35)
