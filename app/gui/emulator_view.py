@@ -1259,6 +1259,7 @@ class EmulatorView:
             self.update_device_status(device_id,"agree")
             em.tap_img("templates/katana/agree.png")
         
+        em.tap_img("templates/katana/no_create_account.png",timeout=10)
         
         detected_t1 = em.detect_templates(
             [
@@ -1268,7 +1269,7 @@ class EmulatorView:
                 "templates/katana/make_sure.png",
                 "templates/katana/before_send.png",
                 "templates/katana/send_code_vai_sms.png",
-                "templates/katana/confirm_your_mobile.png",
+                "templates/katana/confirm_your_mobile.png"
             ]
         )
        
@@ -1291,6 +1292,7 @@ class EmulatorView:
             self.update_device_status(device_id,"send_code_vai_sms")
             em.tap_img("templates/katana/send_code_vai_sms.png")  
             em.tap_img("templates/katana/continue.png",timeout=3) 
+        
     
 
         self.update_device_status(device_id,"Timeout 60s Get SMS")      
@@ -1308,6 +1310,7 @@ class EmulatorView:
             self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
             em.wait(2)
 
+        self.update_device_status(device_id,f"SMS Code: {sms_code}")
         em.send_text(sms_code)
         em.wait(1)
         
@@ -1385,7 +1388,7 @@ class EmulatorView:
             self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
             em.tap_img("templates/katana/get_new_code.png",timeout=2)
         
-        self.update_device_status(device_id,"last_sms_code")  
+        self.update_device_status(device_id,f"Last SMS: {last_sms_code}")  
         em.tap_img("templates/katana/last_sms_code.png")
         em.wait(1)
         em.send_text(last_sms_code)
@@ -1445,9 +1448,7 @@ class EmulatorView:
         self.update_device_status(device_id,"Data Saved")
         
         finish_number(activation_id)
-        
-        
-        em.wait(5)
+        em.wait(2)
         
         
         

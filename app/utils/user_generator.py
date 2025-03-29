@@ -275,9 +275,11 @@ def generate_info(provider="zoho"):
     # Random name
     # Generate names until both first and last names are "human"
     while True:
-        first_name = names.get_first_name(gender='male')  # or remove gender parameter to randomize gender
+        first_name = names.get_first_name(gender='male')
         last_name = names.get_last_name()
-        if is_human_name(first_name) and is_human_name(last_name):
+        if (is_human_name(first_name) and is_human_name(last_name) and
+            first_name.lower() not in {"king", "knight"} and
+            last_name.lower() not in {"king", "knight"}):
             break
 
 
