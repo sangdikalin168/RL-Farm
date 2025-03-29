@@ -765,7 +765,7 @@ class EmulatorView:
         
         em = ADBController(device_id)
         
-        em.randomize_device_fingerprint()
+        # em.randomize_device_fingerprint()
         
         em.clear_facebook_data()
         

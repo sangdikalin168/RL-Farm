@@ -76,8 +76,8 @@ def get_confirmation_code(provider, primary_email, alias_email, password):
         return None
 
 
-# # # Usage Example
-# code = get_confirmation_code(provider="yandex",primary_email="sangdikalin@yandex.com", alias_email="sangdikalin+nswrkw@yandex.com", password="jemkbsquucsaljjf")
+# # Usage Example
+# code = get_confirmation_code(provider="zoho",primary_email="fomo168@zohomail.com", alias_email="fomo168+7jjzuklq@zohomail.com", password="mgSAQkygBTWJ")
 # if code:
 #     print(f"🎉 Your Facebook confirmation code is: {code}")
 # else:

@@ -1,7 +1,7 @@
 import requests
 
-country = 'england'
-operator = 'virtual52'
+country = 'mongolia'
+operator = 'virtual21'
 
 
 product = 'facebook'
