@@ -310,27 +310,13 @@ def generate_info(provider="zoho"):
 
 
 
-    # # US phone number
-    # ny_area_codes = [212, 718, 917, 646, 332, 347]
-    # area_code = random.choice(ny_area_codes)
-    # exchange_code = 600 + random.randint(0, 99)
-    # subscriber_number = random.randint(1000, 9999)
-    # phone_number = f"+1{area_code}{exchange_code}{subscriber_number}"
-    
-    
-        # List of common two-digit mobile operator codes in Mongolia.
-    operator_codes = [81, 85, 88, 89]
+    # US phone number
+    ny_area_codes = [212, 718, 917, 646, 332, 347]
+    area_code = random.choice(ny_area_codes)
+    exchange_code = 600 + random.randint(0, 99)
+    subscriber_number = random.randint(1000, 9999)
+    phone_number = f"+1{area_code}{exchange_code}{subscriber_number}"
 
-    # Randomly select an operator code.
-    operator_code = random.choice(operator_codes)
-
-    # Generate a subscriber number with 5 digits (leading zeros will be added if needed).
-    subscriber_number = random.randint(0, 99999)
-
-    # Construct the phone number:
-    # - Country code: +976
-    # - Mobile number: "8" + operator_code (2 digits) + subscriber_number (5 digits) = 8 digits total.
-    phone_number = f"+9768{operator_code}{subscriber_number:05d}"
 
     # Password (can replace with generate_secure_password())
     password = "Reelfb@#1992"

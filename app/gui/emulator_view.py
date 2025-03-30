@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tkinter as tk
-from app.utils.email_service import get_domain_confirm_code
+from app.utils.email_service import get_domain_confirm_code, get_domain_confirm_email
 from app.utils.five_sim import ban_number, cancel_activation, finish_number, get_available_number, get_latest_sms_code, get_sms
 from app.utils.user_generator import generate_info
 from app.utils.zoho import get_confirmation_code
@@ -762,7 +762,6 @@ class EmulatorView:
             self.register_five_sim(device_id,selected_package)
             return
         
-        
         em = ADBController(device_id)
         
         # em.randomize_device_fingerprint()
@@ -1495,7 +1494,6 @@ class EmulatorView:
                 break
             self.update_device_status(device_id,f"Waiting Verify Code: {confirm_code_count}")
             em.wait(2)
-
         
         self.update_device_status(device_id,"enter_confirmation_code")  
         em.tap_img("templates/katana/enter_confirmation_code.png")
