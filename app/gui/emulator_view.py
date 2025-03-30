@@ -1221,27 +1221,57 @@ class EmulatorView:
         self.update_device_status(device_id,"Next")
         em.tap_img("templates/katana/next.png")
 
-
-        continue_create_account = em.detect_templates(["templates/katana/continue_create_account.png", "templates/katana/eye_img.png","templates/katana/password_textbox.png","templates/katana/invalid_number.png"])
+        invalid_number = True
         
-        if 'continue_create_account.png' in continue_create_account:
-            em.tap_img("templates/katana/continue_create_account.png")
-        
-        self.update_device_status(device_id,"Wait Password Textbox")
-        if 'eye_img.png' in continue_create_account:
-            self.update_device_status(device_id,"Password Textbox Found")
+        while invalid_number:
+            continue_create_account = em.detect_templates(["templates/katana/continue_create_account.png", "templates/katana/eye_img.png","templates/katana/password_textbox.png","templates/katana/invalid_number.png"])
+            
+            if 'continue_create_account.png' in continue_create_account:
+                em.tap_img("templates/katana/continue_create_account.png")
+                invalid_number = False
+            
+            self.update_device_status(device_id,"Wait Password Textbox")
+            if 'eye_img.png' in continue_create_account:
+                self.update_device_status(device_id,"Password Textbox Found")
+                invalid_number = False
 
-        if 'password_textbox.png' in continue_create_account:
-            self.update_device_status(device_id,"Click Password Textbox")
-            em.tap_img("templates/katana/password_textbox.png")
-        
-        if 'invalid_number.png' in continue_create_account:
-            self.update_device_status(device_id,"Invalid Phone")
-            ban_number(activation_id)
-            cancel_activation(activation_id)
-            em.wait(2)
-            return
-
+            if 'password_textbox.png' in continue_create_account:
+                self.update_device_status(device_id,"Click Password Textbox")
+                em.tap_img("templates/katana/password_textbox.png")
+                invalid_number = False
+            
+            if 'invalid_number.png' in continue_create_account:
+                invalid_number = True
+                self.update_device_status(device_id,"Invalid Phone")
+                ban_number(activation_id)
+                cancel_activation(activation_id)
+                em.wait(1)
+                
+                em.tap(247.2,288.8)
+                em.wait(1)
+                
+                em.tap_img("templates/katana/clear_phone_number.png")
+                
+                five_sim = None
+                em.wait(1)
+                
+                while five_sim is None:
+                    print("No available number found, retrying...")
+                    self.update_device_status(device_id,"No available number found, retrying...")
+                    time.sleep(5)  # Wait for 5 seconds before retrying
+                    five_sim = get_available_number()
+                    
+                    activation_id = five_sim[0]
+                    five_sim_number = five_sim[1]
+                
+                em.wait(1)
+                em.send_text(five_sim_number)
+                em.wait(1)
+                
+                self.update_device_status(device_id,"Next")
+                em.tap_img("templates/katana/next.png")
+            
+            
         em.wait(1)
         em.send_text(password)
         
