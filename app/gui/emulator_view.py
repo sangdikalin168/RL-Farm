@@ -967,6 +967,8 @@ class EmulatorView:
         self.update_device_status(device_id,"Detect Spam")
         if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
             self.update_device_status(device_id,"Spam Device")
+            em.run_adb_command(["shell", "svc", "wifi", "disable"])
+            em.run_adb_command(["shell", "svc", "wifi", "enable"])
             return
         
         if "make_sure.png" in detected_t1:
@@ -1027,6 +1029,8 @@ class EmulatorView:
         detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
         if "appeal.png" in detect_appeal1:
             self.update_device_status(device_id,"appeal")
+            em.run_adb_command(["shell", "svc", "wifi", "disable"])
+            em.run_adb_command(["shell", "svc", "wifi", "enable"])
             em.wait(3)
             return
         
@@ -1260,6 +1264,7 @@ class EmulatorView:
             em.tap_img("templates/katana/agree.png")
         
         em.tap_img("templates/katana/no_create_account.png",timeout=10)
+        em.tap_img("templates/katana/try_another_way.png",timeout=10)
         
         detected_t1 = em.detect_templates(
             [
@@ -1325,7 +1330,9 @@ class EmulatorView:
         detect_appeal = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
         if "appeal.png" in detect_appeal:
             self.update_device_status(device_id,"appeal")
-            em.wait(3)
+            em.run_adb_command(["shell", "svc", "wifi", "disable"])
+            em.run_adb_command(["shell", "svc", "wifi", "enable"])
+            self.update_device_status(device_id,"Reboot Emulator")
             return
         
         self.update_device_status(device_id,"Goto Personal Info")
@@ -1337,7 +1344,8 @@ class EmulatorView:
         detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=5)
         if "appeal.png" in detect_appeal1:
             self.update_device_status(device_id,"appeal")
-            em.wait(3)
+            em.run_adb_command(["shell", "svc", "wifi", "disable"])
+            em.run_adb_command(["shell", "svc", "wifi", "enable"])
             return
     
         self.update_device_status(device_id,"Add New Contact")
@@ -1361,6 +1369,85 @@ class EmulatorView:
         self.update_device_status(device_id,"next_add_email")
         em.tap_img("templates/katana/next_add_email.png")
         
+        detect_get_confirm = em.detect_templates([
+            "templates/katana/enter_confirmation_code.png",
+            "templates/katana/try_other_way_what_app.png"
+        ])
+        
+        if 'enter_confirmation_code.png' in detect_get_confirm:
+            self.update_device_status(device_id,"Getting Confirmation Code")
+            confirm_code_count = 0
+            while True:
+                confirm_code = zoho_api_get_confirmation_code(email)
+                confirm_code_count += 1
+                if(confirm_code_count == 30):
+                    return
+                if str(confirm_code).isnumeric():
+                    print("Code Received: "+ confirm_code)
+                    break
+                self.update_device_status(device_id,f"Waiting Verify Code: {confirm_code_count}")
+                em.wait(2)
+            
+            em.tap_img("templates/katana/enter_confirmation_code.png")
+            em.wait(1)
+            em.send_text(confirm_code)
+            em.wait(1)
+            
+            self.update_device_status(device_id,"next_add_email")
+            em.tap_img("templates/katana/next_add_email.png")
+            
+            self.update_device_status(device_id,"close_add_mail")
+            em.tap_img("templates/katana/close_add_mail.png")
+            
+            self.update_device_status(device_id,"contact_info")
+            em.tap_img("templates/katana/contact_info.png")
+            em.wait(1)
+            
+            self.update_device_status(device_id,"phone_img")
+            em.tap_img("templates/katana/phone_img.png")
+            
+            self.update_device_status(device_id,"delete_number")
+            em.tap_img("templates/katana/delete_number.png")
+            
+            self.update_device_status(device_id,"confirm_delete_number")
+            em.tap_img("templates/katana/confirm_delete_number.png")
+            
+            #Getting Security Code
+            
+            security_code_count = 0
+            while True:
+                security_code = zoho_api_get_confirmation_code(email)
+                security_code_count += 1
+                if(security_code_count == 30):
+                    return
+                if str(security_code).isnumeric():
+                    print("Code Received: "+ security_code)
+                    break
+                self.update_device_status(device_id,f"Waiting Verify Code: {security_code_count}")
+                em.wait(2)
+            
+            self.update_device_status(device_id,f"Security Code: {security_code}")
+            em.send_text(security_code)
+            em.wait(2)
+            
+            self.update_device_status(device_id,"Click Continue")
+            em.tap_img("templates/katana/continue_security_code.png")
+            
+            em.wait_img("templates/katana/number_deleted.png")
+            self.update_device_status(device_id,"number_deleted")
+            
+            self.update_device_status(device_id,"Getting UID")
+            uid = em.extract_facebook_uid()
+            self.update_device_status(device_id,uid)
+            em.wait(2)
+            
+            self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
+            self.update_device_status(device_id,"Data Saved")
+            
+            finish_number(activation_id)
+            em.wait(2)
+            
+            
         
         self.update_device_status(device_id,"try_other_way_what_app")
         em.tap_img("templates/katana/try_other_way_what_app.png")

@@ -92,15 +92,36 @@ def zoho_api_get_security_code(recipient_email):
 
     if response.status_code == 200:
         data = response.json().get('data', [])
-        for email in data:
-            if "Your Facebook Security Code" in email['subject'] and recipient_email in email['toAddress']:
-                code_start = email['summary'].find("code is:") + 9
-                code = email['summary'][code_start:code_start + 8].strip()
+        
+        recipient_email = recipient_email.lower()
+        print(f"Looking for security codes sent to: {recipient_email}")
+        
+        # Filter emails that match the recipient email in the "toAddress" field
+        matched_emails = [
+            email for email in data 
+            if recipient_email in email.get('toAddress', '').lower()
+        ]
+
+        print(f"Found {len(matched_emails)} email(s) matching the recipient email.")
+        
+        for email in matched_emails:
+            print(email['subject'])
+            subject = email.get('subject', '')
+            subject_match = re.search(r'(\d{5,8}) is your security code', subject, re.IGNORECASE)
+            if subject_match:
+                code = subject_match.group(1)
+                print(f"Confirmation code found in subject: {code}")
+
+                # Attempt to delete the message
+                try:
+                    message_id = email['messageId']
+                    delete_message(accountId, folderId, message_id)
+                    print(f"Message {message_id} deleted successfully.")
+                except Exception as e:
+                    print(f"Failed to delete message {message_id}: {e}")
                 
-                # After getting the code, delete the message
-                messageId = email['messageId']  # Assuming messageId is available in email data
-                delete_message(accountId, folderId, messageId)  # Delete the message
                 return code
+
     else:
         print(f"Failed to retrieve data. Status code: {response.status_code}")
         return None
@@ -119,11 +140,12 @@ def extract_confirmation_code(email_data, recipient_email):
 
     print(f"Found {len(matched_emails)} email(s) matching the recipient email.")
 
+    
     for email in matched_emails:
         
         # Try extracting the confirmation code from the subject
         subject = email.get('subject', '')
-        print(subject)
+        # print(email)
         subject_match = re.search(r'(\d{5,6}) is your code to confirm this email', subject, re.IGNORECASE)
         if subject_match:
             code = subject_match.group(1)
@@ -179,4 +201,4 @@ def zoho_api_get_confirmation_code(recipient_email):
         return None
 
 
-# print(get_security_code("eth168+7bp7zzgu@zohomail.com"))
+print(zoho_api_get_confirmation_code("eth168+8lzt390f@zohomail.com"))
