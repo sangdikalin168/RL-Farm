@@ -146,7 +146,7 @@ def extract_confirmation_code(email_data, recipient_email):
         # Try extracting the confirmation code from the subject
         subject = email.get('subject', '')
         # print(email)
-        subject_match = re.search(r'(\d{5,6}) is your code to confirm this email', subject, re.IGNORECASE)
+        subject_match = re.search(r'(\d{6}) is your code to confirm this email', subject, re.IGNORECASE)
         if subject_match:
             code = subject_match.group(1)
             print(f"Confirmation code found in subject: {code}")
@@ -201,4 +201,4 @@ def zoho_api_get_confirmation_code(recipient_email):
         return None
 
 
-# print(zoho_api_get_confirmation_code("eth168+8lzt390f@zohomail.com"))
+# print(zoho_api_get_confirmation_code("eth168+v2fqehww@zohomail.com"))
