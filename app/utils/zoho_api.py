@@ -163,7 +163,7 @@ def extract_confirmation_code(email_data, recipient_email):
 
         # Fallback to extracting from the summary
         summary = email.get('summary', '')
-        summary_match = re.search(r"confirmation code:\s*(\d{5})", summary, re.IGNORECASE)
+        summary_match = re.search(r"confirmation code:\s*(\d{6})", summary, re.IGNORECASE)
         if summary_match:
             code = summary_match.group(1)
             print(f"Confirmation code found in summary: {code}")
@@ -201,4 +201,4 @@ def zoho_api_get_confirmation_code(recipient_email):
         return None
 
 
-# print(zoho_api_get_confirmation_code("eth168+v2fqehww@zohomail.com"))
+print(zoho_api_get_confirmation_code("eth168+sanbsxxf133@zohomail.com"))
