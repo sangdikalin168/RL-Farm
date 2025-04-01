@@ -453,6 +453,12 @@ class EmulatorView:
             self.register_katana(device_id,selected_package)
             
     def register_lite(self, device_id, selected_package):
+        
+        if self.selected_mail.get() == "five_sim":
+            print("Five Sim Mode")
+            self.register_five_sim_lite(device_id,selected_package)
+            return
+        
         em = ADBController(device_id)  # ✅ Initialize ADBController for the device
         
         em.randomize_device_fingerprint()
@@ -461,6 +467,8 @@ class EmulatorView:
         em.open_app(selected_package)  # ✅ Open Facebook Lite app
         """Registers a new Facebook account using ADB commands."""
         print(f"📲 Registering Facebook on {device_id}...")
+        
+        
         
         self.update_device_status(device_id,"Waiting Meta Logo")
         meta_logo = em.wait_img("templates/lite/meta_logo.png")
@@ -675,12 +683,11 @@ class EmulatorView:
             
             em.tap_img("templates/lite/confirm_by_email.png")
             
+            em.wait(2)
             em.send_text(alias_email)
             em.wait(1)
             em.tap_img("templates/lite/next.png")
     
-    
-        
         verify_code_count = 0
         while True:
             if self.selected_mail.get() == 'custom':
@@ -1564,7 +1571,454 @@ class EmulatorView:
         
         finish_number(activation_id)
         em.wait(2)
+      
+      
+    def register_five_sim_lite(self, device_id, selected_package):
+        em = ADBController(device_id)
         
+        em.run_adb_command(["shell", "pm", "clear", "com.facebook.lite"])
+        
+        em.open_app(selected_package)
+        
+        self.update_device_status(device_id,"Waiting Meta Logo")
+        meta_logo = em.wait_img("templates/lite/meta_logo.png")
+
+        if( meta_logo == False):
+            self.update_device_status(device_id,"Meta Logo Not Found")
+            em.wait(10)
+            return
+        
+        em.wait(2)
+        self.update_device_status(device_id,"Tap Create Acccount")
+        em.tap(265.1,838.2)
+        
+        em.wait(3)
+
+        
+        self.update_device_status(device_id,"Get Started")
+        detect_last_name_or_get_started = em.detect_templates(["templates/lite/get_started.png","templates/lite/no_create_account.png","templates/lite/create_new_account.png","templates/lite/last_name.png"])
+        
+        self.update_device_status(device_id,"Input Last Name or Get Started")
+        if 'last_name.png' in detect_last_name_or_get_started:
+            self.update_device_status(device_id,"Input Last Name")
+        else:
+            self.update_device_status(device_id,"Input Last Name")
+            em.tap_imgs(["templates/lite/get_started.png","templates/lite/no_create_account.png","templates/lite/create_new_account.png"])
+        
+        
+        first_name, last_name, phone_number, password, email = generate_zoho_info()
+
+        
+        self.update_device_status(device_id,"Input First Name")
+        em.wait(1)
+        em.send_text(first_name)
+        
+        em.tap_img("templates/lite/last_name.png")
+        self.update_device_status(device_id,"Input Last Name")
+        em.wait(1)
+        em.send_text(last_name)
+        em.wait(1)
+        
+        self.update_device_status(device_id,"Next Name")
+        em.tap_img("templates/lite/next.png")
+        
+        
+        invalid_name = em.detect_templates(
+            [
+                "templates/lite/invalid.png", 
+                "templates/lite/wrong_name.png",
+                "templates/lite/set_date.png"
+            ]
+        )
+        
+        
+        if "invalid.png" in invalid_name:
+            self.update_device_status(device_id,"Invalid Name")
+            em.wait(1)
+            return
+        
+        if "wrong_name.png" in invalid_name:
+            self.update_device_status(device_id,"Invalid First Name")
+            em.tap_img("templates/lite/wrong_name.png")
+            em.wait(1)
+            em.send_text(first_name)
+            em.wait(1)
+            em.tap_img("templates/lite/next.png")
+            em.wait(3)
+            em.tap(265.1,316.5)
+            em.wait(1)  
+            em.tap(265.1,316.5)  
+
+        
+        self.update_device_status(device_id,"Wait Set Date")
+        em.wait_img("templates/lite/set_date.png")
+
+        em.tap_img("templates/lite/cancel_date.png")
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/lite/next.png")
+        
+        em.wait(2)
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/lite/next.png")
+        
+        em.wait(2)
+        em.wait_img("templates/lite/how_old_are_you.png")
+        em.send_text(33)
+        em.wait(1)
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/lite/next.png")
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/lite/ok_birthday.png")
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/lite/next.png")
+        
+        self.update_device_status(device_id,"Select Gender")
+        em.tap_img("templates/lite/male.png")
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/lite/next.png")
+        
+        
+        activation_id = 0 
+        five_sim_number = 0
+        self.update_device_status(device_id,"Getting Mobile Number")
+        
+        five_sim = get_available_number()
+        while five_sim is None:
+            print("No available number found, retrying...")
+            self.update_device_status(device_id,"No available number found, retrying...")
+            time.sleep(5)  # Wait for 5 seconds before retrying
+            five_sim = get_available_number()
+        
+        activation_id = five_sim[0]
+        five_sim_number = five_sim[1]
+        
+        print(activation_id, five_sim_number)
+        
+        detected_sign_up = em.detect_templates(["templates/lite/what_is_your_email.png", "templates/lite/mobile_number.png","templates/lite/mobile_number_cursor.png"])
+        
+        if "what_is_your_email.png" in detected_sign_up:
+            self.update_device_status(device_id, "Sign Up With Email")
+            em.tap_img("templates/lite/sign_up_with_phone.png")
+            em.tap_img("templates/lite/mobile_number.png",timeout=5)
+            em.send_text(five_sim_number)
+            em.wait(1)
+            
+            
+        if "mobile_number.png" in detected_sign_up or  "mobile_number_cursor.png" in detected_sign_up:
+            em.tap_img("templates/lite/mobile_number.png",timeout=5)
+            self.update_device_status(device_id,"Set Phone")
+            em.send_text(five_sim_number)
+            em.wait(1)
+            
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/lite/next.png")
+
+        invalid_number = True
+        
+        while invalid_number:
+            continue_create_account = em.detect_templates(["templates/lite/continue_create_account.png", "templates/lite/eye_img.png","templates/lite/password_textbox.png","templates/lite/invalid_number.png"])
+            
+            if 'continue_create_account.png' in continue_create_account:
+                em.tap_img("templates/lite/continue_create_account.png")
+                invalid_number = False
+            
+            self.update_device_status(device_id,"Wait Password Textbox")
+            if 'eye_img.png' in continue_create_account:
+                self.update_device_status(device_id,"Password Textbox Found")
+                invalid_number = False
+
+            if 'password_textbox.png' in continue_create_account:
+                self.update_device_status(device_id,"Click Password Textbox")
+                em.tap_img("templates/lite/password_textbox.png")
+                invalid_number = False
+            
+            if 'invalid_number.png' in continue_create_account:
+                invalid_number = True
+                self.update_device_status(device_id,"Invalid Phone")
+                ban_number(activation_id)
+                cancel_activation(activation_id)
+                em.wait(1)
+                
+                em.tap(247.2,288.8)
+                em.wait(1)
+                
+                em.tap_img("templates/lite/clear_phone_number.png")
+                
+                five_sim = None
+                em.wait(1)
+                
+                while five_sim is None:
+                    print("No available number found, retrying...")
+                    self.update_device_status(device_id,"No available number found, retrying...")
+                    time.sleep(5)  # Wait for 5 seconds before retrying
+                    five_sim = get_available_number()
+                    
+                    activation_id = five_sim[0]
+                    five_sim_number = five_sim[1]
+                
+                em.wait(1)
+                em.send_text(five_sim_number)
+                em.wait(1)
+                
+                self.update_device_status(device_id,"Next")
+                em.tap_img("templates/lite/next.png")
+            
+            
+        em.wait(1)
+        em.send_text(password)
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/lite/next.png")
+        
+        self.update_device_status(device_id,"save")
+        em.tap_img("templates/lite/save.png")
+        
+        self.update_device_status(device_id,"Detect Logged Account")
+        detect_logged_as = em.detect_templates(["templates/lite/logged_as.png","templates/lite/agree.png"])
+        if "logged_as.png" in detect_logged_as:
+            self.update_device_status(device_id,"logged_as")
+            em.wait(3)
+            return
+        
+        if 'agree.png' in detect_logged_as:
+            self.update_device_status(device_id,"agree")
+            em.tap_img("templates/lite/agree.png")
+            
+            
+
+        detected_t1 = em.detect_templates(
+            [
+                "templates/lite/cannot_create_account.png",
+                "templates/lite/we_need_more_info.png",
+                "templates/lite/i_dont_get_code.png",
+                "templates/lite/make_sure.png",
+                "templates/lite/before_send.png",
+                "templates/lite/send_code_vai_sms.png",
+                "templates/lite/confirm_your_mobile.png",
+                "templates/lite/choose_account.png",
+                "templates/lite/no_create_new_account.png"
+            ]
+        )
+       
+        self.update_device_status(device_id,"Detect Spam")
+        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
+            self.update_device_status(device_id,"Spam Device")
+            ban_number(activation_id)
+            cancel_activation(activation_id)
+            return
+        
+        if "make_sure.png" in detected_t1 or 'confirm_your_mobile.png' in detected_t1:
+            self.update_device_status(device_id,"Make Sure Device")
+            em.tap_img("templates/lite/continue.png")
+        
+        if "before_send.png" in detected_t1:
+            self.update_device_status(device_id,"try_another_way")
+            em.tap_img("templates/lite/try_another_way.png")
+            
+        if "send_code_vai_sms.png" in detected_t1:
+            self.update_device_status(device_id,"send_code_vai_sms")
+            em.tap_img("templates/lite/send_code_vai_sms.png")  
+            em.tap_img("templates/lite/send_code.png") 
+        if "choose_account.png" in detected_t1:
+            self.update_device_status(device_id,"choose_account")  
+            em.tap_img("templates/lite/choose_account.png")
+        
+    
+            self.update_device_status(device_id,"no_create_new_account") 
+            em.tap_img("templates/lite/no_create_new_account.png")
+        
+            self.update_device_status(device_id,"send_code_vai_sms")
+            em.tap_img("templates/lite/send_code_vai_sms.png")  
+            em.tap_img("templates/lite/send_code.png") 
+        
+        if "no_create_new_account.png" in detected_t1:
+            self.update_device_status(device_id,"no_create_new_account")  
+            em.tap_img("templates/lite/no_create_new_account.png")
+
+        self.update_device_status(device_id,"Wait SMS Textbox")   
+        em.wait_img("templates/lite/sms_code_textbox.png")
+        
+
+        self.update_device_status(device_id,"Timeout 60s Get SMS")      
+        em.wait(8)  
+        verify_code_count = 0
+        while True:
+            sms_code = get_sms(activation_id)
+            verify_code_count += 1
+            if(verify_code_count == 30):
+                cancel_activation(activation_id)
+                return
+            if str(sms_code).isnumeric():
+                print("Code Received: "+ sms_code)
+                em.tap_img("templates/lite/sms_code_textbox.png")
+                em.wait(2)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
+            em.wait(2)
+
+        self.update_device_status(device_id,f"SMS Code: {sms_code}")
+        
+        for char in sms_code:
+            em.send_text(char)
+            em.wait(0.2)
+            
+        em.wait(1)
+        
+        
+        self.update_device_status(device_id,"ok_confirm_code")
+        em.tap_img("templates/lite/ok_confirm_code.png")
+
+        self.update_device_status(device_id,"skip_add_profile")
+        em.wait_img("templates/lite/skip_add_profile.png",timeout=30)
+        
+        self.update_device_status(device_id,"skip_add_profile")
+        em.tap_img("templates/lite/skip_add_profile.png",timeout=30)
+        
+        em.wait(5)
+        self.update_device_status(device_id,"skip_add_friend")
+        em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
+        
+        self.update_device_status(device_id,"import_contact")
+        em.tap_img("templates/lite/import_contact.png",timeout=20)
+        
+        
+        
+        em.wait(5)
+        self.update_device_status(device_id,"skip_add_friend")
+        em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
+        
+        
+        self.update_device_status(device_id,"menu_bar")
+        em.tap_img("templates/lite/menu_bar.png",timeout=30)
+        em.wait(3)
+        
+        self.update_device_status(device_id,"Swipe To Setting")
+        em.swipe(270.0,941.6,272.3,202.4,700)
+        
+        
+        em.wait(2)
+        self.update_device_status(device_id,"Setting")
+        em.tap_img("templates/lite/setting.png",timeout=30)
+        
+        self.update_device_status(device_id,"Account Center")
+        em.tap_img("templates/lite/account_center.png",timeout=30)
+        
+        self.update_device_status(device_id,"personal_detail")
+        em.tap_img("templates/lite/personal_detail.png",timeout=30)
+        
+        self.update_device_status(device_id,"contact_info")
+        em.tap_img("templates/lite/contact_info.png",timeout=30)
+        
+        self.update_device_status(device_id,"add_new_contact")
+        em.tap_img("templates/lite/add_new_contact.png",timeout=30)
+        
+        self.update_device_status(device_id,"add_email")
+        em.tap_img("templates/lite/add_email.png",timeout=30)
+        
+        em.wait(1)
+        em.tap_img("templates/lite/enter_email_address.png",timeout=30)
+        em.wait(1)
+        em.send_text(email)
+        
+        em.wait(1)
+        em.tap_img("templates/lite/account_checkbox.png",timeout=30)
+        
+        
+        em.tap_img("templates/lite/next_add_email.png",timeout=30)
+        
+        self.update_device_status(device_id,"try_other_way_what_app")
+        em.tap_img("templates/lite/try_other_way_what_app.png")
+        
+        
+        em.tap_img("templates/lite/see_more.png")
+        
+        self.update_device_status(device_id,"text_message_check_box")
+        em.tap_img("templates/lite/text_message_check_box.png")
+        
+        em.tap_img("templates/lite/continue_message.png")
+        
+        self.update_device_status(device_id,"Timeout 60s Get SMS")        
+        wait_sms_count = 0
+        while True:
+            last_sms_code = get_latest_sms_code(activation_id)
+            wait_sms_count += 1
+            if(wait_sms_count == 60):
+                ban_number(activation_id)
+                cancel_activation(activation_id)
+                return
+            if str(last_sms_code).isnumeric() and last_sms_code != sms_code:
+                print("Code Received: "+ last_sms_code)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
+            em.tap_img("templates/lite/get_new_code.png",timeout=2)
+        
+        self.update_device_status(device_id,f"Last SMS: {last_sms_code}")  
+        em.tap_img("templates/lite/last_sms_code.png")
+        em.wait(1)
+        em.send_text(last_sms_code)
+        em.wait(1)
+        
+        em.tap_img("templates/lite/continue_message.png")
+        
+        self.update_device_status(device_id,"next_add_email")
+        em.tap_img("templates/lite/next_add_email.png")
+        
+        confirm_code_count = 0
+        while True:
+            confirm_code = zoho_api_get_confirmation_code(email)
+            confirm_code_count += 1
+            if(confirm_code_count == 30):
+                return
+            if str(confirm_code).isnumeric():
+                print("Code Received: "+ confirm_code)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {confirm_code_count}")
+            em.wait(2)
+        
+        self.update_device_status(device_id,"enter_confirmation_code")  
+        em.tap_img("templates/lite/enter_confirmation_code.png")
+        em.wait(1)
+        em.send_text(confirm_code)
+        em.wait(1)
+        
+        self.update_device_status(device_id,"next_add_email")
+        em.tap_img("templates/lite/next_add_email.png")
+        
+        self.update_device_status(device_id,"close_add_mail")
+        em.tap_img("templates/lite/close_add_mail.png")
+        
+        self.update_device_status(device_id,"phone_img")
+        em.tap_img("templates/lite/phone_img.png")
+        
+        self.update_device_status(device_id,"delete_number")
+        em.tap_img("templates/lite/delete_number.png")
+        
+        self.update_device_status(device_id,"confirm_delete_number")
+        em.tap_img("templates/lite/confirm_delete_number.png")
+        
+        
+        em.wait_img("templates/lite/number_deleted.png")
+        self.update_device_status(device_id,"number_deleted")
+        
+        self.update_device_status(device_id,"Getting UID")
+        uid = em.extract_lite_uid()
+        self.update_device_status(device_id,uid)
+        em.wait(2)
+        
+        self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
+        self.update_device_status(device_id,"Data Saved")
+        
+        finish_number(activation_id)
+        em.wait(2)
+        
+        
+          
         
         
         
