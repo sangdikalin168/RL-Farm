@@ -1790,8 +1790,6 @@ class EmulatorView:
             self.update_device_status(device_id,"agree")
             em.tap_img("templates/lite/agree.png")
             
-            
-
         detected_t1 = em.detect_templates(
             [
                 "templates/lite/cannot_create_account.png",
@@ -1802,7 +1800,8 @@ class EmulatorView:
                 "templates/lite/send_code_vai_sms.png",
                 "templates/lite/confirm_your_mobile.png",
                 "templates/lite/choose_account.png",
-                "templates/lite/no_create_new_account.png"
+                "templates/lite/no_create_new_account.png",
+                "templates/lite/confirm_by_email_lite.png",
             ]
         )
        
@@ -1840,6 +1839,8 @@ class EmulatorView:
         if "no_create_new_account.png" in detected_t1:
             self.update_device_status(device_id,"no_create_new_account")  
             em.tap_img("templates/lite/no_create_new_account.png")
+        if "templates/lite/confirm_by_email_lite.png" in detected_t1:
+            self.update_device_status(device_id,"Wait SMS Textbox") 
 
         self.update_device_status(device_id,"Wait SMS Textbox")   
         em.wait_img("templates/lite/sms_code_textbox.png")
@@ -1880,19 +1881,30 @@ class EmulatorView:
         self.update_device_status(device_id,"skip_add_profile")
         em.tap_img("templates/lite/skip_add_profile.png",timeout=30)
         
-        em.wait(5)
+        em.wait(2)
         self.update_device_status(device_id,"skip_add_friend")
         em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
         
         self.update_device_status(device_id,"import_contact")
         em.tap_img("templates/lite/import_contact.png",timeout=20)
         
-        
-        
-        em.wait(5)
+        em.wait(2)
         self.update_device_status(device_id,"skip_add_friend")
         em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
         
+        
+        # em.detect_templates(
+        #     [
+        #         "templates/lite/something_went_wrong.png"
+        #     ]
+        # )
+        
+        em.wait(3)
+        self.update_device_status(device_id,"skip_add_friend_list")
+        em.tap_img("templates/lite/skip_add_friend_list.png",timeout=30)
+        
+        em.wait(2)
+        #Confirm Skip Add Friend List
         
         self.update_device_status(device_id,"menu_bar")
         em.tap_img("templates/lite/menu_bar.png",timeout=30)
@@ -1921,7 +1933,8 @@ class EmulatorView:
         self.update_device_status(device_id,"add_email")
         em.tap_img("templates/lite/add_email.png",timeout=30)
         
-        em.wait(1)
+        em.wait(2)
+        self.update_device_status(device_id,"Enter Email Address")
         em.tap_img("templates/lite/enter_email_address.png",timeout=30)
         em.wait(1)
         em.send_text(email)
@@ -1956,7 +1969,7 @@ class EmulatorView:
                 print("Code Received: "+ last_sms_code)
                 break
             self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
-            em.tap_img("templates/lite/get_new_code.png",timeout=2)
+            # em.tap_img("templates/lite/get_new_code.png",timeout=2)
         
         self.update_device_status(device_id,f"Last SMS: {last_sms_code}")  
         em.tap_img("templates/lite/last_sms_code.png")
