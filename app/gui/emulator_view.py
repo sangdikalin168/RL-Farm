@@ -1885,26 +1885,41 @@ class EmulatorView:
         self.update_device_status(device_id,"skip_add_friend")
         em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
         
-        self.update_device_status(device_id,"import_contact")
-        em.tap_img("templates/lite/import_contact.png",timeout=20)
+        template_113 = em.detect_templates(
+            [
+                "templates/lite/user_img.png",
+                "templates/lite/import_contact.png"
+            ]
+        )
         
-        em.wait(2)
-        self.update_device_status(device_id,"skip_add_friend")
-        em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
+        if "import_contact.png" in template_113:
+            self.update_device_status(device_id,"import_contact")
+            em.tap_img("templates/lite/import_contact.png",timeout=20)
+            
+            detect_fri_list = em.detect_templates([
+                "templates/lite/user_img.png",
+                "templates/lite/skip_add_friend.png"
+            ])
+            
+            if "user_img.png" in detect_fri_list:
+                self.update_device_status(device_id,"Skip To Home Page")
+            if "skip_add_friend.png" in detect_fri_list:
+                self.update_device_status(device_id,"skip_add_friend")
+                
+            em.wait(2)
+            self.update_device_status(device_id,"skip_add_friend")
+            em.tap_img("templates/lite/skip_add_friend.png",timeout=10)
         
+            em.wait(10)
+            self.update_device_status(device_id,"skip_add_friend_list")
+            em.tap_img("templates/lite/skip_add_friend_list.png",timeout=10)
+            
+            em.wait(2)
+            #Confirm Skip Add Friend List
+            em.tap_img("templates/lite/confirm_skip_add_fri.png",timeout=30)
         
-        # em.detect_templates(
-        #     [
-        #         "templates/lite/something_went_wrong.png"
-        #     ]
-        # )
-        
-        em.wait(3)
-        self.update_device_status(device_id,"skip_add_friend_list")
-        em.tap_img("templates/lite/skip_add_friend_list.png",timeout=30)
-        
-        em.wait(2)
-        #Confirm Skip Add Friend List
+        if "user_img.png" in template_113:
+            self.update_device_status(device_id,"Skip To Home Page")
         
         self.update_device_status(device_id,"menu_bar")
         em.tap_img("templates/lite/menu_bar.png",timeout=30)
@@ -1915,6 +1930,11 @@ class EmulatorView:
         
         
         em.wait(2)
+        
+        self.update_device_status(device_id,"Setting & Privacy")
+        em.tap_img("templates/lite/setting_and_privacy.png",timeout=30)
+        
+        
         self.update_device_status(device_id,"Setting")
         em.tap_img("templates/lite/setting.png",timeout=30)
         
@@ -1929,6 +1949,8 @@ class EmulatorView:
         
         self.update_device_status(device_id,"add_new_contact")
         em.tap_img("templates/lite/add_new_contact.png",timeout=30)
+        
+        em.wait(1)
         
         self.update_device_status(device_id,"add_email")
         em.tap_img("templates/lite/add_email.png",timeout=30)
