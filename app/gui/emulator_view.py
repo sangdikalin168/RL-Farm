@@ -1664,6 +1664,9 @@ class EmulatorView:
         
         em.wait(2)
         em.wait_img("templates/lite/how_old_are_you.png")
+        em.wait(1)
+        em.tap(73.3,214.0)
+        em.wait(1)
         em.send_text(33)
         em.wait(1)
         
@@ -1878,12 +1881,33 @@ class EmulatorView:
         self.update_device_status(device_id,"skip_add_profile")
         em.wait_img("templates/lite/skip_add_profile.png",timeout=30)
         
+        self.update_device_status(device_id,"Close App...")
+        em.run_adb_command(["shell", "am", "force-stop", "com.facebook.lite"])
+        em.wait(2)
+        
+        self.update_device_status(device_id,"Opening App...")
+        em.open_app(selected_package)
+        
+        
+        detect_appeal = em.detect_templates(
+            [
+                "templates/lite/skip_add_profile.png",
+                "templates/lite/refresh.png",
+            ]
+        )
+        
+        if "refresh.png" in detect_appeal:
+            self.update_device_status(device_id,"Spam")
+            em.wait(200)
+            return
+        else:
+            self.update_device_status(device_id,"skip_add_profile")
+        
+        em.wait(10)
+        
         self.update_device_status(device_id,"skip_add_profile")
         em.tap_img("templates/lite/skip_add_profile.png",timeout=30)
         
-        em.wait(2)
-        self.update_device_status(device_id,"skip_add_friend")
-        em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
         
         template_113 = em.detect_templates(
             [
@@ -1895,6 +1919,7 @@ class EmulatorView:
         if "import_contact.png" in template_113:
             self.update_device_status(device_id,"import_contact")
             em.tap_img("templates/lite/import_contact.png",timeout=20)
+            em.wait(3)
             
             detect_fri_list = em.detect_templates([
                 "templates/lite/user_img.png",
@@ -1905,18 +1930,17 @@ class EmulatorView:
                 self.update_device_status(device_id,"Skip To Home Page")
             if "skip_add_friend.png" in detect_fri_list:
                 self.update_device_status(device_id,"skip_add_friend")
-                
-            em.wait(2)
-            self.update_device_status(device_id,"skip_add_friend")
-            em.tap_img("templates/lite/skip_add_friend.png",timeout=10)
-        
-            em.wait(10)
-            self.update_device_status(device_id,"skip_add_friend_list")
-            em.tap_img("templates/lite/skip_add_friend_list.png",timeout=10)
+                em.wait(2)
+                self.update_device_status(device_id,"skip_add_friend")
+                em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
             
-            em.wait(2)
-            #Confirm Skip Add Friend List
-            em.tap_img("templates/lite/confirm_skip_add_fri.png",timeout=30)
+                em.wait(10)
+                self.update_device_status(device_id,"skip_add_friend_list")
+                em.tap_img("templates/lite/skip_add_friend_list.png",timeout=30)
+                
+                em.wait(2)
+                #Confirm Skip Add Friend List
+                em.tap_img("templates/lite/confirm_skip_add_fri.png",timeout=30)
         
         if "user_img.png" in template_113:
             self.update_device_status(device_id,"Skip To Home Page")
@@ -1991,6 +2015,7 @@ class EmulatorView:
                 print("Code Received: "+ last_sms_code)
                 break
             self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
+            em.wait(1)
             # em.tap_img("templates/lite/get_new_code.png",timeout=2)
         
         self.update_device_status(device_id,f"Last SMS: {last_sms_code}")  
@@ -2017,7 +2042,7 @@ class EmulatorView:
             em.wait(2)
         
         self.update_device_status(device_id,"enter_confirmation_code")  
-        em.tap_img("templates/lite/enter_confirmation_code.png")
+        em.tap_img("templates/lite/enter_confirmation_code.png",timeout=10)
         em.wait(1)
         em.send_text(confirm_code)
         em.wait(1)
@@ -2028,6 +2053,7 @@ class EmulatorView:
         self.update_device_status(device_id,"close_add_mail")
         em.tap_img("templates/lite/close_add_mail.png")
         
+        em.wait(7)
         self.update_device_status(device_id,"phone_img")
         em.tap_img("templates/lite/phone_img.png")
         
