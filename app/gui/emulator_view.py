@@ -1501,7 +1501,7 @@ class EmulatorView:
         while True:
             last_sms_code = get_latest_sms_code(activation_id)
             wait_sms_count += 1
-            if(wait_sms_count == 60):
+            if(wait_sms_count == 120):
                 ban_number(activation_id)
                 cancel_activation(activation_id)
                 return

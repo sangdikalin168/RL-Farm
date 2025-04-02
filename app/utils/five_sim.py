@@ -155,7 +155,7 @@ def finish_number(id):
 # cancel_activation("754867428")
 
 # activation_id = 754879629
-# result = get_latest_sms_code(755064689)
+# result = get_latest_sms_code(763229731)
 # print(result)
 
 # print(get_available_number())

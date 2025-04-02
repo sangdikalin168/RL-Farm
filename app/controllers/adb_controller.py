@@ -412,29 +412,54 @@ class ADBController:
         print("✅ Facebook data cleared, identity spoofed, and app restarted successfully!")
 
     def extract_facebook_uid(self):
-        """Runs adb root, reads Facebook's auth XML, and extracts the UID."""
+        # """Runs adb root, reads Facebook's auth XML, and extracts the UID."""
+        # print("🚀 Running adb root...")
+        # self.run_adb_command(["root"])
+
+        # print("📄 Reading msys-auth-data.xml...")
+        # xml_content = self.run_adb_command([
+        #     "shell",
+        #     "cat",
+        #     "/data/data/com.facebook.katana/shared_prefs/msys-auth-data.xml"
+        # ])
+
+        # if not xml_content:
+        #     print("❌ Failed to read XML or file does not exist.")
+        #     return None
+
+        # # Extract UID from the string name attribute
+        # match = re.search(r'<string name="(\d+)-_rt_client_id"', xml_content)
+        # if match:
+        #     uid = match.group(1)
+        #     print(f"✅ Extracted Facebook UID: {uid}")
+        #     return uid
+        # else:
+        #     print("❌ UID not found in the XML.")
+        #     return None
+        
+        """Extract Facebook UID from acra_criticaldata_store.xml on a rooted device."""
         print("🚀 Running adb root...")
         self.run_adb_command(["root"])
 
-        print("📄 Reading msys-auth-data.xml...")
+        print("📄 Reading acra_criticaldata_store.xml...")
         xml_content = self.run_adb_command([
             "shell",
             "cat",
-            "/data/data/com.facebook.katana/shared_prefs/msys-auth-data.xml"
+            "/data/data/com.facebook.katana/shared_prefs/acra_criticaldata_store.xml"
         ])
 
         if not xml_content:
             print("❌ Failed to read XML or file does not exist.")
             return None
 
-        # Extract UID from the string name attribute
-        match = re.search(r'<string name="(\d+)-_rt_client_id"', xml_content)
+        # Match the USER_ID string value
+        match = re.search(r'<string name="USER_ID">(\d+)</string>', xml_content)
         if match:
             uid = match.group(1)
             print(f"✅ Extracted Facebook UID: {uid}")
             return uid
         else:
-            print("❌ UID not found in the XML.")
+            print("❌ USER_ID not found in the XML.")
             return None
 
     def extract_lite_uid(self):
