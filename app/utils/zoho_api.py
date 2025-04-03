@@ -201,4 +201,4 @@ def zoho_api_get_confirmation_code(recipient_email):
         return None
 
 
-# print(zoho_api_get_confirmation_code("eth168+tw1cto8o@zohomail.com"))
+# zoho_api_get_security_code("eth168+gm0mfd9q@zohomail.com")

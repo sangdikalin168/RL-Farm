@@ -22,7 +22,7 @@ from app.utils.email_service import get_domain_confirm_code, get_domain_confirm_
 from app.utils.five_sim import ban_number, cancel_activation, finish_number, get_available_number, get_latest_sms_code, get_sms
 from app.utils.user_generator import generate_info
 from app.utils.zoho import get_confirmation_code
-from app.utils.zoho_api import zoho_api_get_confirmation_code
+from app.utils.zoho_api import zoho_api_get_confirmation_code, zoho_api_get_security_code
 from app.utils.zoho_generate import generate_zoho_info
 
 class EmulatorView:
@@ -1417,7 +1417,7 @@ class EmulatorView:
             self.update_device_status(device_id,"Getting Confirmation Code")
             confirm_code_count = 0
             while True:
-                confirm_code = zoho_api_get_confirmation_code(email)
+                confirm_code = zoho_api_get_security_code(email)
                 confirm_code_count += 1
                 if(confirm_code_count == 30):
                     return
