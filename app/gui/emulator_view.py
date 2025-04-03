@@ -1198,7 +1198,6 @@ class EmulatorView:
         
         five_sim = get_available_number()
         while five_sim is None:
-            print("No available number found, retrying...")
             self.update_device_status(device_id,"No available number found, retrying...")
             time.sleep(5)  # Wait for 5 seconds before retrying
             five_sim = get_available_number()
@@ -1263,13 +1262,15 @@ class EmulatorView:
                 em.wait(1)
                 
                 while five_sim is None:
-                    print("No available number found, retrying...")
-                    self.update_device_status(device_id,"No available number found, retrying...")
-                    time.sleep(5)  # Wait for 5 seconds before retrying
                     five_sim = get_available_number()
                     
-                    activation_id = five_sim[0]
-                    five_sim_number = five_sim[1]
+                    if five_sim is None:
+                        self.update_device_status(device_id, "No available number found, retrying...")
+                        time.sleep(5)  # Wait before retrying again
+
+                # ✅ Now it's safe to unpack
+                activation_id = five_sim[0]
+                five_sim_number = five_sim[1]
                 
                 em.wait(1)
                 em.send_text(five_sim_number)
@@ -1362,13 +1363,14 @@ class EmulatorView:
         self.update_device_status(device_id,"skip_add_profile")
         em.tap_img("templates/katana/skip_add_profile.png",timeout=20)
         
-        
+        self.update_device_status(device_id,"Detect Appeal")
         detect_appeal = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
         if "appeal.png" in detect_appeal:
             self.update_device_status(device_id,"appeal")
             em.run_adb_command(["shell", "svc", "wifi", "disable"])
             em.run_adb_command(["shell", "svc", "wifi", "enable"])
             self.update_device_status(device_id,"Reboot Emulator")
+            em.wait(260)
             return
         
         self.update_device_status(device_id,"Goto Personal Info")
@@ -1376,12 +1378,13 @@ class EmulatorView:
         
         em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/personal_info/contact_points"])
     
-    
+        self.update_device_status(device_id,"Detect Appeal")
         detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=5)
         if "appeal.png" in detect_appeal1:
             self.update_device_status(device_id,"appeal")
             em.run_adb_command(["shell", "svc", "wifi", "disable"])
             em.run_adb_command(["shell", "svc", "wifi", "enable"])
+            em.wait(260)
             return
     
         self.update_device_status(device_id,"Add New Contact")
@@ -1919,7 +1922,7 @@ class EmulatorView:
         if "import_contact.png" in template_113:
             self.update_device_status(device_id,"import_contact")
             em.tap_img("templates/lite/import_contact.png",timeout=20)
-            em.wait(3)
+            em.wait(10)
             
             detect_fri_list = em.detect_templates([
                 "templates/lite/user_img.png",
@@ -2007,7 +2010,7 @@ class EmulatorView:
         while True:
             last_sms_code = get_latest_sms_code(activation_id)
             wait_sms_count += 1
-            if(wait_sms_count == 60):
+            if(wait_sms_count == 130):
                 ban_number(activation_id)
                 cancel_activation(activation_id)
                 return
@@ -2016,7 +2019,7 @@ class EmulatorView:
                 break
             self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
             em.wait(1)
-            # em.tap_img("templates/lite/get_new_code.png",timeout=2)
+            em.tap_img("templates/lite/get_new_code.png",timeout=2)
         
         self.update_device_status(device_id,f"Last SMS: {last_sms_code}")  
         em.tap_img("templates/lite/last_sms_code.png")
