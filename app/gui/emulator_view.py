@@ -1370,7 +1370,7 @@ class EmulatorView:
             em.run_adb_command(["shell", "svc", "wifi", "disable"])
             em.run_adb_command(["shell", "svc", "wifi", "enable"])
             self.update_device_status(device_id,"Reboot Emulator")
-            em.wait(260)
+            em.wait(600)
             return
         
         self.update_device_status(device_id,"Goto Personal Info")
@@ -1384,7 +1384,7 @@ class EmulatorView:
             self.update_device_status(device_id,"appeal")
             em.run_adb_command(["shell", "svc", "wifi", "disable"])
             em.run_adb_command(["shell", "svc", "wifi", "enable"])
-            em.wait(260)
+            em.wait(600)
             return
     
         self.update_device_status(device_id,"Add New Contact")
