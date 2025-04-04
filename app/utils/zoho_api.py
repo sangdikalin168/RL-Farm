@@ -107,7 +107,7 @@ def zoho_api_get_security_code(recipient_email):
         for email in matched_emails:
             print(email['subject'])
             subject = email.get('subject', '')
-            subject_match = re.search(r'(\d{5,8}) is your security code', subject, re.IGNORECASE)
+            subject_match = re.search(r'\b(\d{6,8})\b\s*(?:is\s+)?(?:your\s+)?(?:code|security code|verification code|to confirm this email)', subject, re.IGNORECASE)
             if subject_match:
                 code = subject_match.group(1)
                 print(f"Confirmation code found in subject: {code}")
@@ -201,4 +201,4 @@ def zoho_api_get_confirmation_code(recipient_email):
         return None
 
 
-# zoho_api_get_security_code("eth168+gm0mfd9q@zohomail.com")
+zoho_api_get_security_code("eth168+js8p9ya1@zohomail.com")

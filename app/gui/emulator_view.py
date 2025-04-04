@@ -1243,7 +1243,7 @@ class EmulatorView:
 
             if 'password_textbox.png' in continue_create_account:
                 self.update_device_status(device_id,"Click Password Textbox")
-                em.tap_img("templates/katana/password_textbox.png")
+                em.tap_img("templates/katana/password_textbox.png",timeout=15)
                 invalid_number = False
             
             if 'invalid_number.png' in continue_create_account:
@@ -1300,42 +1300,53 @@ class EmulatorView:
             self.update_device_status(device_id,"agree")
             em.tap_img("templates/katana/agree.png")
         
-        em.tap_img("templates/katana/no_create_account.png",timeout=10)
-        em.tap_img("templates/katana/try_another_way.png",timeout=10)
+        agree_step_repeat = True
+        while agree_step_repeat:
+            agree_step_repeat = False
+            detected_t1 = em.detect_templates(
+                [
+                    "templates/katana/cannot_create_account.png",
+                    "templates/katana/we_need_more_info.png",
+                    "templates/katana/i_dont_get_code.png",
+                    "templates/katana/make_sure.png",
+                    "templates/katana/before_send.png",
+                    "templates/katana/send_code_vai_sms.png",
+                    "templates/katana/confirm_your_mobile.png",
+                    "templates/katana/try_another_way.png",
+                    "templates/katana/no_create_account.png"
+                ]
+            )
         
-        detected_t1 = em.detect_templates(
-            [
-                "templates/katana/cannot_create_account.png",
-                "templates/katana/we_need_more_info.png",
-                "templates/katana/i_dont_get_code.png",
-                "templates/katana/make_sure.png",
-                "templates/katana/before_send.png",
-                "templates/katana/send_code_vai_sms.png",
-                "templates/katana/confirm_your_mobile.png"
-            ]
-        )
-       
-        self.update_device_status(device_id,"Detect Spam")
-        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
-            self.update_device_status(device_id,"Spam Device")
-            ban_number(activation_id)
-            cancel_activation(activation_id)
-            return
-        
-        if "make_sure.png" in detected_t1 or 'confirm_your_mobile.png' in detected_t1:
-            self.update_device_status(device_id,"Make Sure Device")
-            em.tap_img("templates/katana/continue.png")
-        
-        if "before_send.png" in detected_t1:
-            self.update_device_status(device_id,"try_another_way")
-            em.tap_img("templates/katana/try_another_way.png")
+            self.update_device_status(device_id,"Detect Spam")
+            if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
+                self.update_device_status(device_id,"Spam Device")
+                ban_number(activation_id)
+                cancel_activation(activation_id)
+                return
             
-        if "send_code_vai_sms.png" in detected_t1:
-            self.update_device_status(device_id,"send_code_vai_sms")
-            em.tap_img("templates/katana/send_code_vai_sms.png")  
-            em.tap_img("templates/katana/continue.png",timeout=3) 
-        
-    
+            if "make_sure.png" in detected_t1 or 'confirm_your_mobile.png' in detected_t1:
+                self.update_device_status(device_id,"Make Sure Device")
+                em.tap_img("templates/katana/continue.png")
+            
+            if "before_send.png" in detected_t1:
+                self.update_device_status(device_id,"try_another_way")
+                em.tap_img("templates/katana/try_another_way.png")
+                
+            if "send_code_vai_sms.png" in detected_t1:
+                self.update_device_status(device_id,"send_code_vai_sms")
+                em.tap_img("templates/katana/send_code_vai_sms.png")  
+                em.tap_img("templates/katana/continue.png",timeout=3) 
+            
+            if "try_another_way.png" in detected_t1:
+                self.update_device_status(device_id,"try_another_way")
+                em.tap_img("templates/katana/try_another_way.png")
+                agree_step_repeat = True
+            
+            if "no_create_account.png" in detected_t1:
+                self.update_device_status(device_id,"no_create_account")
+                em.tap_img("templates/katana/no_create_account.png")
+                agree_step_repeat = True
+            
 
         self.update_device_status(device_id,"Timeout 60s Get SMS")      
         em.wait(8)  
@@ -1504,7 +1515,7 @@ class EmulatorView:
         while True:
             last_sms_code = get_latest_sms_code(activation_id)
             wait_sms_count += 1
-            if(wait_sms_count == 120):
+            if(wait_sms_count == 160):
                 ban_number(activation_id)
                 cancel_activation(activation_id)
                 return
