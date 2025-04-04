@@ -89,10 +89,7 @@ class EmulatorView:
 
         self.change_imei_button = ttkb.Button(button_frame, text="Change IMEI", command=self.emulator.change_imei, style="success.TButton")
         self.change_imei_button.grid(row=0, column=5, padx=5)
-        
-                # ✅ Select All Button
-        self.select_all_button = ttkb.Button(button_frame, text="Select All", command=self.toggle_select_all, style="primary.TButton")
-        self.select_all_button.grid(row=0, column=6, padx=5, pady=5, sticky="nsew")
+    
 
         # ✅ Frame for Mode Selection Checkboxes with Border
         register_frame = ttkb.Labelframe(button_frame, text="FB Selection", padding=5)
@@ -126,6 +123,9 @@ class EmulatorView:
         self.five_sim_checkbox = ttkb.Radiobutton(mode_selection_frame, text="5SIM", variable=self.selected_mail, value="five_sim", style="primary.TRadiobutton")
         self.five_sim_checkbox.grid(row=0, column=3, sticky="w", padx=5)
 
+                # ✅ Select All Button
+        self.select_all_button = ttkb.Button(button_frame, text="Select All", command=self.toggle_select_all, style="primary.TButton")
+        self.select_all_button.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
 
         # ✅ Dictionary to Store Checkbox States
@@ -1354,7 +1354,7 @@ class EmulatorView:
         while True:
             sms_code = get_sms(activation_id)
             verify_code_count += 1
-            if(verify_code_count == 30):
+            if(verify_code_count == 60):
                 cancel_activation(activation_id)
                 return
             if str(sms_code).isnumeric():
