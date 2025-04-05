@@ -1268,6 +1268,8 @@ class EmulatorView:
         
         
         first_name, last_name, password, email = five_sim_generate_info(main_email=credentials.email)
+        
+        print(email)
 
         
         self.update_device_status(device_id,"Input First Name")
