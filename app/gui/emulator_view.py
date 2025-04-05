@@ -1633,7 +1633,7 @@ class EmulatorView:
                 if str(security_code).isnumeric():
                     print("Code Received: "+ security_code)
                     break
-                self.update_device_status(device_id,f"Waiting Verify Code: {security_code_count}")
+                self.update_device_status(device_id,f"Security Code: {security_code_count}")
                 em.wait(2)
             
             self.update_device_status(device_id,f"Security Code: {security_code}")
