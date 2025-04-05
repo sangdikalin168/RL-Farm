@@ -19,11 +19,18 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tkinter as tk
 from app.utils.email_service import get_domain_confirm_code, get_domain_confirm_email
-from app.utils.five_sim import ban_number, cancel_activation, finish_number, get_available_number, get_latest_sms_code, get_sms
+from app.utils.five_sim import FiveSimAPI
+from app.utils.five_sim_generate import five_sim_generate_info
 from app.utils.user_generator import generate_info
 from app.utils.zoho import get_confirmation_code
 from app.utils.zoho_api import zoho_api_get_confirmation_code, zoho_api_get_security_code
 from app.utils.zoho_generate import generate_zoho_info
+
+from dataclasses import dataclass
+@dataclass
+class EmailCredentials:
+    email: str
+    pass_mail: str
 
 class EmulatorView:
     def __init__(self, master,db_service):
@@ -33,6 +40,25 @@ class EmulatorView:
         self.selected_emulators = {}
         self.selected_package = tk.StringVar(value="com.facebook.katana")
         self.selected_mail = tk.StringVar(value="zoho")
+        
+        self.email_password_mapping = {
+            "eth168@zohomail.com": "SeJrd7FY5d2s",
+            "bnb168@zohomail.com": "ThCQMwH903Pf",
+            "avax168@zohomail.com": "ydaUqLHEgsvE",
+        }
+        self.selected_fivesim_email = tk.StringVar(value=list(self.email_password_mapping.keys())[0])
+        
+        self.api_mapping = {
+            "API 1": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzUzMDgxMjgsImlhdCI6MTc0Mzc3MjEyOCwicmF5IjoiN2YyMTMyMjNmNTcxMjIwMTUzMjM2NDhhM2JiYjM1ZjciLCJzdWIiOjMxMzM0ODR9.aHYVLcrpXSBva917hFbtXAqMgppHuJ5c1yYRzqwEl7QAg8dgehZR7DaWqbbnGhRUThUZqpv6P6NwEDfNa9v2vxFJelwM-XMANchSqOd8vrSht-n1Z_6aLEWefwCYvRHbjT4z3lTB4kJ7X4hkVELiy03PjYvuhCdUGQeV_L0L53LRgrJ2aLi71mv6TZ7MKy7BfYzXmFMaiZ0azH5qbb6jaQR_REPR_1AD0gf4E5-Ue9DP66FunR1UIxtVImZV7Htd0YswQYoJe8-cOrbTlWRMbEoiGfsLjFm17TMj6Ol_tYsdl4d_L6NFWG2mrdd58xGMAM1nnwldzOalkYn1CRRPOg",
+            "API 2": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzUzMDE1MDcsImlhdCI6MTc0Mzc2NTUwNywicmF5IjoiODA3NjMzZGNmMjY4OGMxODFiNDJkMDdlZTM3ZDI5ZTgiLCJzdWIiOjMxMjk2OTh9.hTmcHi0_g7xcoI9Hfe9NQfzIeGxBNHn9Zgk2uQSq-QUAhQF4mhKUujjBqpgp8XR5aCaiAoXu0JpkD1UNtAi3SiA6LxJbFe1iH-DFyDylje7pAZ3LcgzYQo1jGWz8bEXE9Hzb8MLpJW6MsjNjYlGti2NwiR3r3Yo3MAcVVmMpbrlptM7rgA8fuIYND2zpdfx8gIWlII-ERnFGbaX6ycM23321XUnebf3P3MzImTAJYgY5Cx_IUxyU57nBhTOAbSrZTssK0b4uBEeo29nyKVN-2li5kCDvhDJpoSkUlJGWOb6rYayPWiDeZBMdglK6v0nSttrZRETKVRfp6zbRslTTFQ",
+            "API 3": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzI0NjEwNTMsImlhdCI6MTc0MDkyNTA1MywicmF5IjoiNjFhZTM4NTQ3NmY3OGM0MzlkODk1ZGY2YTkyMTg4NDEiLCJzdWIiOjIwNTQ3OTF9.hBcz9PwIMtnn60JM_dQ5p-glZ_lFb8j3XH0oq8Hkp4QcSo8oT9ezngA-KgwIFn_c-rRoKM81MQOvdIuN7-cdPhUQhsCi3GgiXS2fF1i03GU8qCR61E2rTkDFKNy-Da0g0-T5fPE_bGIqltce_3a-uLXKx5HHiLN1oUgHdX3v0In2ghIsBKIILJDYGwGVppjly3eaitzwpDfBRrkOJoPeEoce22V9FhgFXrn7JXeTugb_G7FLgS7PFecFwt45Cy2Q408PBD81GknqdlcfTNES2K9D6dMoSFykvqC65WEF6Exp3NFM1PBe9N1n0ezoSYzYCGYM_GBk2Uwpvxr2GajJCA",
+        }
+        
+        self.country_operator_mapping = {
+            "england": ["virtual38", "virtual51", "virtual52"],
+            "mongolia": ["virtual21"]
+        }
+        
         
 
         # ✅ Setup Emulator UI
@@ -123,7 +149,68 @@ class EmulatorView:
         self.five_sim_checkbox = ttkb.Radiobutton(mode_selection_frame, text="5SIM", variable=self.selected_mail, value="five_sim", style="primary.TRadiobutton")
         self.five_sim_checkbox.grid(row=0, column=3, sticky="w", padx=5)
 
-                # ✅ Select All Button
+        # --- 5SIM Cascading Selections ---
+        # Create a frame for the extra 5SIM options; initially hidden
+        self.fivesim_options_frame = ttkb.Frame(mode_selection_frame)
+        self.fivesim_options_frame.grid(row=1, column=0, columnspan=4, sticky="w", padx=5, pady=5)
+        self.fivesim_options_frame.grid_remove()  # Hide by default
+
+        # Create a dropdown (combobox) for selecting an email from our mapping.
+        ttkb.Label(self.fivesim_options_frame, text="Email:").grid(row=0, column=0, sticky="w")
+        self.fivesim_email_combobox = ttkb.Combobox(
+            self.fivesim_options_frame,
+            textvariable=self.selected_fivesim_email,
+            state="readonly",
+            values=list(self.email_password_mapping.keys())
+        )
+        self.fivesim_email_combobox.grid(row=0, column=1, sticky="w", padx=5)
+
+        # API Selection
+        self.selected_api = tk.StringVar(value="API 1")
+        ttkb.Label(self.fivesim_options_frame, text="API:").grid(row=0, column=2, sticky="w")
+        self.fivesim_api_combobox = ttkb.Combobox(
+            self.fivesim_options_frame,
+            textvariable=self.selected_api,
+            state="readonly",
+            values=list(self.api_mapping.keys())
+        )
+        self.fivesim_api_combobox.grid(row=0, column=3, sticky="w", padx=5)
+
+
+        # --- Operator Selection ---
+        ttkb.Label(self.fivesim_options_frame, text="Operator:").grid(row=1, column=2, sticky="w")
+        # Create a StringVar for the operator selection.
+        self.selected_operator = tk.StringVar()
+        self.fivesim_operator_combobox = ttkb.Combobox(
+            self.fivesim_options_frame,
+            textvariable=self.selected_operator,
+            state="readonly",
+            values=[]  # Initially empty; it will be populated based on the country.
+        )
+        self.fivesim_operator_combobox.grid(row=1, column=3, sticky="w", padx=5)
+        
+
+        # --- Country Selection ---
+        ttkb.Label(self.fivesim_options_frame, text="Country:").grid(row=1, column=0, sticky="w")
+        # Create a StringVar for the country selection and assign a default value.
+        self.selected_country = tk.StringVar(value="england")
+        self.fivesim_country_combobox = ttkb.Combobox(
+            self.fivesim_options_frame,
+            textvariable=self.selected_country,
+            state="readonly",
+            values=list(self.country_operator_mapping.keys())
+        )
+        self.fivesim_country_combobox.grid(row=1, column=1, sticky="w", padx=5)
+
+        # Attach the trace to the country StringVar so that changes trigger the callback.
+        self.selected_country.trace("w", self.country_selection_changed)
+        
+        # Call the callback right away to update the operator combobox with the default value.
+        self.country_selection_changed()
+
+
+        self.selected_mail.trace("w", self.mail_selection_changed)
+        # ✅ Select All Button
         self.select_all_button = ttkb.Button(button_frame, text="Select All", command=self.toggle_select_all, style="primary.TButton")
         self.select_all_button.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
@@ -167,6 +254,63 @@ class EmulatorView:
         self.load_players()
         self.emulator_tree.bind("<ButtonRelease-1>", self.toggle_checkbox)
 
+    
+    def country_selection_changed(self, *args):
+        selected_country = self.selected_country.get()
+        operators = self.country_operator_mapping.get(selected_country, [])
+        # Update the combobox values
+        self.fivesim_operator_combobox['values'] = operators
+        if operators:
+            # Set the default value explicitly for both the StringVar and the widget
+            self.selected_operator.set(operators[0])
+            self.fivesim_operator_combobox.set(operators[0])
+        else:
+            self.selected_operator.set("")
+            self.fivesim_operator_combobox.set("")
+
+    def get_country(self) -> str:
+        """
+        Returns the selected country. (You can modify this if you have a separate country code mapping.)
+        """
+        return self.selected_country.get()
+
+    def get_email_credentials(self) -> EmailCredentials:
+        """
+        Returns the selected email and its fixed password as an EmailCredentials object.
+        """
+        selected_email = self.fivesim_email_combobox.get()
+        if not selected_email:
+            messagebox.showerror("Input Error", "Please select an email for 5SIM.")
+            return None
+        fixed_pass = self.email_password_mapping.get(selected_email)
+        return EmailCredentials(email=selected_email, pass_mail=fixed_pass)
+
+    def get_operator(self) -> str:
+        """
+        Retrieves the selected operator from the combobox.
+        """
+        operator = self.fivesim_operator_combobox.get()
+        if not operator:
+            messagebox.showerror("Input Error", "Please select an operator for 5SIM.")
+            return None
+        return operator
+
+    def get_api_key(self) -> str:
+        """
+        Retrieves the API key from the mapping based on the selected API option.
+        """
+        selected_api = self.fivesim_api_combobox.get()
+        if not selected_api:
+            messagebox.showerror("Input Error", "Please select an API option for 5SIM.")
+            return None
+        return self.api_mapping.get(selected_api)
+
+    def mail_selection_changed(self, *args):
+        """Show the cascading 5SIM dropdowns when 'five_sim' is selected, hide otherwise."""
+        if self.selected_mail.get() == "five_sim":
+            self.fivesim_options_frame.grid()  # Show the extra options
+        else:
+            self.fivesim_options_frame.grid_remove()  # Hide the extra options
 
     def load_players(self):
         """Fetch player list and update TreeView efficiently."""
@@ -1051,7 +1195,19 @@ class EmulatorView:
         
     def register_five_sim(self, device_id, selected_package):
         em = ADBController(device_id)
+            
+
+        credentials = self.get_email_credentials()
+        api_key = self.get_api_key()
+        country = self.get_country()
+        operator = self.get_operator()
+        if None in (credentials, api_key, country, operator):
+            return
         
+        five_sim_api = FiveSimAPI(api_key, country=country, operator=operator)
+        # Here you could log or print the selections:
+        messagebox.showinfo("5 Sim Balance", f"Balance: {five_sim_api.get_balance()} RUB")
+            
         em.clear_facebook_data()
         
         em.open_app(selected_package)
@@ -1111,7 +1267,7 @@ class EmulatorView:
             em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
         
         
-        first_name, last_name, phone_number, password, email = generate_zoho_info()
+        first_name, last_name, password, email = five_sim_generate_info(main_email=credentials.email)
 
         
         self.update_device_status(device_id,"Input First Name")
@@ -1196,11 +1352,12 @@ class EmulatorView:
         five_sim_number = 0
         self.update_device_status(device_id,"Getting Mobile Number")
         
-        five_sim = get_available_number()
+        
+        five_sim = five_sim_api.get_available_number()
         while five_sim is None:
             self.update_device_status(device_id,"No available number found, retrying...")
             time.sleep(5)  # Wait for 5 seconds before retrying
-            five_sim = get_available_number()
+            five_sim_api.get_available_number()
         
         activation_id = five_sim[0]
         five_sim_number = five_sim[1]
@@ -1249,8 +1406,8 @@ class EmulatorView:
             if 'invalid_number.png' in continue_create_account:
                 invalid_number = True
                 self.update_device_status(device_id,"Invalid Phone")
-                ban_number(activation_id)
-                cancel_activation(activation_id)
+                five_sim_api.ban_number(activation_id)
+                five_sim_api.cancel_activation(activation_id)
                 em.wait(1)
                 
                 em.tap(247.2,288.8)
@@ -1262,7 +1419,7 @@ class EmulatorView:
                 em.wait(1)
                 
                 while five_sim is None:
-                    five_sim = get_available_number()
+                    five_sim = five_sim_api.get_available_number()
                     
                     if five_sim is None:
                         self.update_device_status(device_id, "No available number found, retrying...")
@@ -1320,8 +1477,8 @@ class EmulatorView:
             self.update_device_status(device_id,"Detect Spam")
             if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
                 self.update_device_status(device_id,"Spam Device")
-                ban_number(activation_id)
-                cancel_activation(activation_id)
+                five_sim_api.ban_number(activation_id)
+                five_sim_api.cancel_activation(activation_id)
                 return
             
             if "make_sure.png" in detected_t1 or 'confirm_your_mobile.png' in detected_t1:
@@ -1352,10 +1509,12 @@ class EmulatorView:
         em.wait(8)  
         verify_code_count = 0
         while True:
-            sms_code = get_sms(activation_id)
+            sms_code = five_sim_api.get_sms(activation_id)
             verify_code_count += 1
             if(verify_code_count == 60):
-                cancel_activation(activation_id)
+                five_sim_api.cancel_activation(activation_id)
+                five_sim_api.ban_number(activation_id)
+                self.update_device_status(device_id,"SMS Timeout")
                 return
             if str(sms_code).isnumeric():
                 print("Code Received: "+ sms_code)
@@ -1466,7 +1625,7 @@ class EmulatorView:
             
             security_code_count = 0
             while True:
-                security_code = zoho_api_get_confirmation_code(email)
+                security_code = get_confirmation_code(provider="zoho", primary_email=credentials.email, alias_email=email, password=credentials.pass_mail)
                 security_code_count += 1
                 if(security_code_count == 30):
                     return
@@ -1494,7 +1653,7 @@ class EmulatorView:
             self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
             self.update_device_status(device_id,"Data Saved")
             
-            finish_number(activation_id)
+            five_sim_api.finish_number(activation_id)
             em.wait(2)
             
             
@@ -1513,11 +1672,11 @@ class EmulatorView:
         self.update_device_status(device_id,"Timeout 60s Get SMS")        
         wait_sms_count = 0
         while True:
-            last_sms_code = get_latest_sms_code(activation_id)
+            last_sms_code = five_sim_api.get_latest_sms_code(activation_id)
             wait_sms_count += 1
             if(wait_sms_count == 160):
-                ban_number(activation_id)
-                cancel_activation(activation_id)
+                five_sim_api.ban_number(activation_id)
+                five_sim_api.cancel_activation(activation_id)
                 return
             if str(last_sms_code).isnumeric() and last_sms_code != sms_code:
                 print("Code Received: "+ last_sms_code)
@@ -1583,7 +1742,7 @@ class EmulatorView:
         self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
         self.update_device_status(device_id,"Data Saved")
         
-        finish_number(activation_id)
+        five_sim_api.finish_number(activation_id)
         em.wait(2)
       
       
