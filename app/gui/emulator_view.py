@@ -1205,8 +1205,7 @@ class EmulatorView:
             return
         
         five_sim_api = FiveSimAPI(api_key, country=country, operator=operator)
-        # Here you could log or print the selections:
-        messagebox.showinfo("5 Sim Balance", f"Balance: {five_sim_api.get_balance()} RUB")
+        print("Balance: ", five_sim_api.get_balance())
             
         em.clear_facebook_data()
         
@@ -1697,14 +1696,14 @@ class EmulatorView:
         
         confirm_code_count = 0
         while True:
-            confirm_code = zoho_api_get_confirmation_code(email)
+            confirm_code = get_confirmation_code(provider="zoho", primary_email=credentials.email, alias_email=email, password=credentials.pass_mail)
             confirm_code_count += 1
             if(confirm_code_count == 30):
                 return
             if str(confirm_code).isnumeric():
                 print("Code Received: "+ confirm_code)
                 break
-            self.update_device_status(device_id,f"Waiting Verify Code: {confirm_code_count}")
+            self.update_device_status(device_id,f"Confirm Code : {confirm_code_count}")
             em.wait(2)
         
         self.update_device_status(device_id,"enter_confirmation_code")  
