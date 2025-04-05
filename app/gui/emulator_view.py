@@ -1675,7 +1675,7 @@ class EmulatorView:
         while True:
             last_sms_code = five_sim_api.get_latest_sms_code(activation_id)
             wait_sms_count += 1
-            if(wait_sms_count == 160):
+            if(wait_sms_count == 320):
                 five_sim_api.ban_number(activation_id)
                 five_sim_api.cancel_activation(activation_id)
                 return
