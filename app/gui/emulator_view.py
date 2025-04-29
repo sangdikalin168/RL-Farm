@@ -1289,7 +1289,8 @@ class EmulatorView:
             [
                 "templates/katana/invalid.png", 
                 "templates/katana/wrong_name.png",
-                "templates/katana/set_date.png"
+                "templates/katana/set_date.png",
+                "templates/katana/select_your_name.png",
             ]
         )
         
@@ -1311,6 +1312,11 @@ class EmulatorView:
             em.wait(1)  
             em.tap(265.1,316.5)  
 
+        if "select_your_name.png" in invalid_name:
+            self.update_device_status(device_id,"Select Your Name")
+            em.tap_img("templates/katana/name_checkbox.png")
+            self.update_device_status(device_id,"Next")
+            em.tap_img("templates/katana/next.png")
         
         
         self.update_device_status(device_id,"Wait Set Date")
@@ -1750,6 +1756,14 @@ class EmulatorView:
     def register_five_sim_lite(self, device_id, selected_package):
         em = ADBController(device_id)
         
+        
+        credentials = self.get_email_credentials()
+        api_key = self.get_api_key()
+        country = self.get_country()
+        operator = self.get_operator()
+        if None in (credentials, api_key, country, operator):
+            return
+        
         em.run_adb_command(["shell", "pm", "clear", "com.facebook.lite"])
         
         em.open_app(selected_package)
@@ -1780,7 +1794,9 @@ class EmulatorView:
             em.tap_imgs(["templates/lite/get_started.png","templates/lite/no_create_account.png","templates/lite/create_new_account.png"])
         
         
-        first_name, last_name, phone_number, password, email = generate_zoho_info()
+        first_name, last_name, password, email = five_sim_generate_info(main_email=credentials.email)
+        
+        print(email)
 
         
         self.update_device_status(device_id,"Input First Name")
@@ -1859,17 +1875,19 @@ class EmulatorView:
         self.update_device_status(device_id,"next")
         em.tap_img("templates/lite/next.png")
         
+        five_sim_api = FiveSimAPI(api_key, country=country, operator=operator)
+        print("Balance: ", five_sim_api.get_balance())
         
         activation_id = 0 
         five_sim_number = 0
         self.update_device_status(device_id,"Getting Mobile Number")
         
-        five_sim = get_available_number()
+        five_sim = five_sim_api.get_available_number()
         while five_sim is None:
             print("No available number found, retrying...")
             self.update_device_status(device_id,"No available number found, retrying...")
             time.sleep(5)  # Wait for 5 seconds before retrying
-            five_sim = get_available_number()
+            five_sim = five_sim_api.get_available_number()
         
         activation_id = five_sim[0]
         five_sim_number = five_sim[1]
@@ -1918,8 +1936,8 @@ class EmulatorView:
             if 'invalid_number.png' in continue_create_account:
                 invalid_number = True
                 self.update_device_status(device_id,"Invalid Phone")
-                ban_number(activation_id)
-                cancel_activation(activation_id)
+                five_sim_api.ban_number(activation_id)
+                five_sim_api.cancel_activation(activation_id)
                 em.wait(1)
                 
                 em.tap(247.2,288.8)
@@ -1934,7 +1952,7 @@ class EmulatorView:
                     print("No available number found, retrying...")
                     self.update_device_status(device_id,"No available number found, retrying...")
                     time.sleep(5)  # Wait for 5 seconds before retrying
-                    five_sim = get_available_number()
+                    five_sim = five_sim_api.get_available_number()
                     
                     activation_id = five_sim[0]
                     five_sim_number = five_sim[1]
@@ -1985,8 +2003,8 @@ class EmulatorView:
         self.update_device_status(device_id,"Detect Spam")
         if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
             self.update_device_status(device_id,"Spam Device")
-            ban_number(activation_id)
-            cancel_activation(activation_id)
+            five_sim_api.ban_number(activation_id)
+            five_sim_api.cancel_activation(activation_id)
             return
         
         if "make_sure.png" in detected_t1 or 'confirm_your_mobile.png' in detected_t1:
@@ -2027,10 +2045,10 @@ class EmulatorView:
         em.wait(8)  
         verify_code_count = 0
         while True:
-            sms_code = get_sms(activation_id)
+            sms_code = five_sim_api.get_sms(activation_id)
             verify_code_count += 1
             if(verify_code_count == 30):
-                cancel_activation(activation_id)
+                five_sim_api.cancel_activation(activation_id)
                 return
             if str(sms_code).isnumeric():
                 print("Code Received: "+ sms_code)
@@ -2179,11 +2197,11 @@ class EmulatorView:
         self.update_device_status(device_id,"Timeout 60s Get SMS")        
         wait_sms_count = 0
         while True:
-            last_sms_code = get_latest_sms_code(activation_id)
+            last_sms_code = five_sim_api.get_latest_sms_code(activation_id)
             wait_sms_count += 1
             if(wait_sms_count == 130):
-                ban_number(activation_id)
-                cancel_activation(activation_id)
+                five_sim_api.ban_number(activation_id)
+                five_sim_api.cancel_activation(activation_id)
                 return
             if str(last_sms_code).isnumeric() and last_sms_code != sms_code:
                 print("Code Received: "+ last_sms_code)
@@ -2249,7 +2267,7 @@ class EmulatorView:
         self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
         self.update_device_status(device_id,"Data Saved")
         
-        finish_number(activation_id)
+        five_sim_api.finish_number(activation_id)
         em.wait(2)
         
         
