@@ -21,6 +21,7 @@ import tkinter as tk
 from app.utils.email_service import get_domain_confirm_code, get_domain_confirm_email
 from app.utils.five_sim import FiveSimAPI
 from app.utils.five_sim_generate import five_sim_generate_info
+from app.utils.gmail_api import get_order, get_otp
 from app.utils.user_generator import generate_info
 from app.utils.zoho import get_confirmation_code
 from app.utils.zoho_api import zoho_api_get_confirmation_code, zoho_api_get_security_code
@@ -56,7 +57,8 @@ class EmulatorView:
         
         self.country_operator_mapping = {
             "england": ["virtual38", "virtual51", "virtual52"],
-            "mongolia": ["virtual21"]
+            "mongolia": ["virtual21"],
+            "argentina": ["virtual52"],
         }
         
         
@@ -148,6 +150,9 @@ class EmulatorView:
 
         self.five_sim_checkbox = ttkb.Radiobutton(mode_selection_frame, text="5SIM", variable=self.selected_mail, value="five_sim", style="primary.TRadiobutton")
         self.five_sim_checkbox.grid(row=0, column=3, sticky="w", padx=5)
+        
+        self.gmail_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Gmail", variable=self.selected_mail, value="gmail", style="primary.TRadiobutton")
+        self.gmail_checkbox.grid(row=0, column=4, sticky="w", padx=5)
 
         # --- 5SIM Cascading Selections ---
         # Create a frame for the extra 5SIM options; initially hidden
@@ -912,10 +917,13 @@ class EmulatorView:
             print("Five Sim Mode")
             self.register_five_sim(device_id,selected_package)
             return
+        if self.selected_mail.get() == "gmail":
+            print("Gmail Mode")
+            self.register_gmail(device_id,selected_package)
+            return
         
         em = ADBController(device_id)
         
-        # em.randomize_device_fingerprint()
         
         em.clear_facebook_data()
         
@@ -1391,6 +1399,8 @@ class EmulatorView:
         self.update_device_status(device_id,"Next")
         em.tap_img("templates/katana/next.png")
 
+        em.wait(3)
+        
         invalid_number = True
         
         while invalid_number:
@@ -1477,12 +1487,13 @@ class EmulatorView:
                     "templates/katana/send_code_vai_sms.png",
                     "templates/katana/confirm_your_mobile.png",
                     "templates/katana/try_another_way.png",
-                    "templates/katana/no_create_account.png"
+                    "templates/katana/no_create_account.png",
+                    "templates/katana/appeal.png",
                 ]
             )
         
             self.update_device_status(device_id,"Detect Spam")
-            if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
+            if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1 or "appeal.png" in detected_t1:
                 self.update_device_status(device_id,"Spam Device")
                 five_sim_api.ban_number(activation_id)
                 five_sim_api.cancel_activation(activation_id)
@@ -1751,7 +1762,6 @@ class EmulatorView:
         
         five_sim_api.finish_number(activation_id)
         em.wait(2)
-      
       
     def register_five_sim_lite(self, device_id, selected_package):
         em = ADBController(device_id)
@@ -2270,8 +2280,502 @@ class EmulatorView:
         five_sim_api.finish_number(activation_id)
         em.wait(2)
         
+    def register_gmail(self, device_id, selected_package):
+        em = ADBController(device_id)
+            
+        em.clear_facebook_data()
         
-          
+        em.open_app(selected_package)
+        
+        credentials = self.get_email_credentials()
+        
+        self.update_device_status(device_id,"Waiting Meta Logo")
+        meta_logo = em.wait_img("templates/katana/meta_logo.png")
+
+        if( meta_logo == False):
+            self.update_device_status(device_id,"Meta Logo Not Found")
+            em.wait(10)
+            return
+        
+        login_templates = em.detect_templates([
+            "templates/katana/login_step/create_new_account.png",
+            "templates/katana/login_step/create_new_account_1.png",
+            "templates/katana/login_step/create_new_account_2.png",
+            "templates/katana/login_step/join_facebook.png",
+            "templates/katana/login_step/sign_up.png",
+            "templates/katana/login_step/create_new_account_blue.png",
+            "templates/katana/login_step/get_started.png"
+        ])
+        
+        login_temp = [
+            "templates/katana/login_step/create_new_account.png",
+            "templates/katana/login_step/create_new_account_1.png",
+            "templates/katana/login_step/create_new_account_2.png",
+            "templates/katana/login_step/join_facebook.png",
+            "templates/katana/login_step/sign_up.png",
+            "templates/katana/login_step/create_new_account_blue.png",
+            "templates/katana/login_step/get_started.png"
+        ]
+        
+        
+        if "create_new_account.png" in login_templates or 'create_new_account_1.png' in login_templates or 'create_new_account_2.png' in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
+            self.update_device_status(device_id,"Create New Account")
+            em.wait(2)
+            em.tap_imgs(login_temp)
+        
+        
+        if "create_new_account_blue.png" in login_templates:
+            self.update_device_status(device_id,"Create New Account Blue")
+            em.tap_img("templates/katana/login_step/create_new_account_blue.png")
+        
+        if "get_started.png" in login_templates:
+            self.update_device_status(device_id,"Get Started")
+            em.tap_img("templates/katana/get_started.png")
+
+        
+        
+        detect_last_name_or_get_started = em.detect_templates(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png","templates/katana/last_name.png"])
+        
+        self.update_device_status(device_id,"Input Last Name or Get Started")
+        if 'last_name.png' in detect_last_name_or_get_started:
+            self.update_device_status(device_id,"Input Last Name")
+        else:
+            self.update_device_status(device_id,"Input Last Name")
+            em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
+        
+        
+        first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info(provider=self.selected_mail.get()).values()
+    
+        
+        self.update_device_status(device_id,"Input First Name")
+        em.wait(1)
+        em.send_text(first_name)
+        
+        em.tap_img("templates/katana/last_name.png")
+        self.update_device_status(device_id,"Input Last Name")
+        em.wait(1)
+        em.send_text(last_name)
+        em.wait(1)
+        
+        self.update_device_status(device_id,"Next Name")
+        em.tap_img("templates/katana/next.png")
+        
+        
+        invalid_name = em.detect_templates(
+            [
+                "templates/katana/invalid.png", 
+                "templates/katana/wrong_name.png",
+                "templates/katana/set_date.png",
+                "templates/katana/select_your_name.png",
+            ]
+        )
+        
+        
+        if "invalid.png" in invalid_name:
+            self.update_device_status(device_id,"Invalid Name")
+            em.wait(1)
+            return
+        
+        if "wrong_name.png" in invalid_name:
+            self.update_device_status(device_id,"Invalid First Name")
+            em.tap_img("templates/katana/wrong_name.png")
+            em.wait(1)
+            em.send_text(first_name)
+            em.wait(1)
+            em.tap_img("templates/katana/next.png")
+            em.wait(3)
+            em.tap(265.1,316.5)
+            em.wait(1)  
+            em.tap(265.1,316.5)  
+
+        if "select_your_name.png" in invalid_name:
+            self.update_device_status(device_id,"Select Your Name")
+            em.tap_img("templates/katana/name_checkbox.png")
+            self.update_device_status(device_id,"Next")
+            em.tap_img("templates/katana/next.png")
+        
+        
+        self.update_device_status(device_id,"Wait Set Date")
+        em.wait_img("templates/katana/set_date.png")
+
+        # Generate random birthdate
+        year_random = random.randint(27, 35)
+        month_random = random.randint(20, 40)
+        day_random = random.randint(10, 30)
+        
+    
+        self.update_device_status(device_id,"set year")
+        for x in range(year_random):
+            em.tap(383, 402)
+            time.sleep(0.1)
+            
+        self.update_device_status(device_id,"set month")
+        for x in range(month_random):
+            em.tap(266, 404)
+            time.sleep(0.1)
+        
+        self.update_device_status(device_id,"set date")
+        for x in range(day_random):
+            em.tap(146, 404)
+            time.sleep(0.1)
+            
+        em.tap_img("templates/katana/set_date.png")
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/katana/next.png")
+        
+        self.update_device_status(device_id,"Select Gender")
+        em.tap_img("templates/katana/male.png")
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/katana/next.png")
+        
+        detected_sign_up = em.detect_templates(["templates/katana/what_is_your_email.png", "templates/katana/mobile_number.png","templates/katana/mobile_number_cursor.png"])
+        
+        if "what_is_your_email.png" in detected_sign_up:
+            self.update_device_status(device_id, "Sign Up With Email")
+            em.tap_img("templates/katana/sign_up_with_phone.png")
+            em.tap_img("templates/katana/mobile_number.png",timeout=5)
+            em.send_text(phone_number)
+            em.wait(1)
+            
+            
+        if "mobile_number.png" in detected_sign_up or  "mobile_number_cursor.png" in detected_sign_up:
+            em.tap_img("templates/katana/mobile_number.png",timeout=5)
+            self.update_device_status(device_id,"Set Phone")
+            em.send_text(phone_number)
+            em.wait(1)
+            
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/katana/next.png")
+
+        invalid_number = True
+        
+        while invalid_number:
+            continue_create_account = em.detect_templates(["templates/katana/continue_create_account.png", "templates/katana/eye_img.png","templates/katana/password_textbox.png","templates/katana/invalid_number.png"])
+            
+            if 'continue_create_account.png' in continue_create_account:
+                em.tap_img("templates/katana/continue_create_account.png")
+                invalid_number = False
+            
+            self.update_device_status(device_id,"Wait Password Textbox")
+            if 'eye_img.png' in continue_create_account:
+                self.update_device_status(device_id,"Password Textbox Found")
+                invalid_number = False
+
+            if 'password_textbox.png' in continue_create_account:
+                self.update_device_status(device_id,"Click Password Textbox")
+                em.tap_img("templates/katana/password_textbox.png",timeout=15)
+                invalid_number = False
+            
+            if 'invalid_number.png' in continue_create_account:
+                invalid_number = True
+                self.update_device_status(device_id,"Invalid Phone")
+                return
+            
+            
+        em.wait(1)
+        em.send_text(password)
+        
+        self.update_device_status(device_id,"next")
+        em.tap_img("templates/katana/next.png")
+        
+        self.update_device_status(device_id,"save")
+        em.tap_img("templates/katana/save.png")
+        
+        self.update_device_status(device_id,"Detect Logged Account")
+        detect_logged_as = em.detect_templates(["templates/katana/logged_as.png","templates/katana/agree.png"])
+        if "logged_as.png" in detect_logged_as:
+            self.update_device_status(device_id,"logged_as")
+            em.wait(3)
+            return
+        
+        if 'agree.png' in detect_logged_as:
+            self.update_device_status(device_id,"agree")
+            em.tap_img("templates/katana/agree.png")
+        
+        detected_t1 = em.detect_templates(
+            [
+                "templates/katana/cannot_create_account.png",
+                "templates/katana/we_need_more_info.png",
+                "templates/katana/i_dont_get_code.png",
+                "templates/katana/make_sure.png",
+                "templates/katana/before_send.png",
+                "templates/katana/appeal.png"
+            ]
+        )
+        skip_idont_get_code = False
+        
+        self.update_device_status(device_id,"Detect Spam")
+        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1 or "appeal.png" in detected_t1:
+            self.update_device_status(device_id,"Spam Device")
+            return
+        
+        if "make_sure.png" in detected_t1:
+            self.update_device_status(device_id,"Make Sure Device")
+            em.tap_img("templates/katana/continue.png")
+        
+        if "before_send.png" in detected_t1:
+            self.update_device_status(device_id,"try_another_way")
+            em.tap_img("templates/katana/try_another_way.png")
+            
+            self.update_device_status(device_id,"confirm_by_email")
+            em.tap_img("templates/katana/confirm_by_email.png")
+            skip_idont_get_code = True
+
+
+        if skip_idont_get_code == False:
+            em.tap_img("templates/katana/i_dont_get_code.png",timeout=60)
+            self.update_device_status(device_id,"i_dont_get_code")
+            em.tap_img("templates/katana/confirm_by_email.png")
+        
+
+        em.tap_img("templates/katana/email.png")
+        
+        quid = get_order()
+        em.wait(1)
+        print(quid)
+        email, latest_code = get_otp(quid)
+        
+        print(email)
+        
+        em.wait(1)
+        em.send_text(email)
+        em.wait(1)
+        
+        em.tap_img("templates/katana/next.png")
+        
+        
+        em.wait(5)
+        
+        verify_code_count = 0
+        while True:
+            
+            email, latest_code = get_otp(quid)
+            code = latest_code
+            
+            verify_code_count += 1
+            
+            if(verify_code_count == 60):
+                return
+            if str(code).isnumeric():
+                print("Code Received: "+ code)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}s")
+            em.wait(1)
+
+        em.send_text(code)
+        
+        em.tap_img("templates/katana/next.png")
+        
+        self.update_device_status(device_id,"skip_add_profile")
+        em.tap_img("templates/katana/skip_add_profile.png")
+        
+        em.wait_img("templates/katana/skip_add_profile.png",timeout=30)
+        
+        self.update_device_status(device_id,"skip_add_profile")
+        em.tap_img("templates/katana/skip_add_profile.png",timeout=20)
+        
+        self.update_device_status(device_id,"Detect Appeal")
+        detect_appeal = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
+        if "appeal.png" in detect_appeal:
+            self.update_device_status(device_id,"appeal")
+            return
+        
+        self.update_device_status(device_id,"Goto Personal Info")
+
+        
+        em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/personal_info/contact_points"])
+    
+        self.update_device_status(device_id,"Detect Appeal")
+        detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=5)
+        if "appeal.png" in detect_appeal1:
+            self.update_device_status(device_id,"appeal")
+            return
+    
+        self.update_device_status(device_id,"Add New Contact")
+        em.tap_img("templates/katana/add_new_contact.png")
+        
+        self.update_device_status(device_id,"Add Email")
+        em.tap_img("templates/katana/add_email.png")
+        
+        self.update_device_status(device_id,"profile_checkbox")
+        em.tap_img("templates/katana/profile_checkbox.png")
+        
+        
+        self.update_device_status(device_id,"enter_email")
+        em.tap_img("templates/katana/enter_email.png")
+        em.wait(1)
+        
+        em.send_text(email)
+        
+        em.wait(1)
+        
+        self.update_device_status(device_id,"next_add_email")
+        em.tap_img("templates/katana/next_add_email.png")
+        
+        detect_get_confirm = em.detect_templates([
+            "templates/katana/enter_confirmation_code.png",
+            "templates/katana/try_other_way_what_app.png"
+        ])
+        
+        if 'enter_confirmation_code.png' in detect_get_confirm:
+            self.update_device_status(device_id,"Getting Confirmation Code")
+            confirm_code_count = 0
+            while True:
+                confirm_code = zoho_api_get_security_code(email)
+                confirm_code_count += 1
+                if(confirm_code_count == 30):
+                    return
+                if str(confirm_code).isnumeric():
+                    print("Code Received: "+ confirm_code)
+                    break
+                self.update_device_status(device_id,f"Waiting Verify Code: {confirm_code_count}")
+                em.wait(2)
+            
+            em.tap_img("templates/katana/enter_confirmation_code.png")
+            em.wait(1)
+            em.send_text(confirm_code)
+            em.wait(1)
+            
+            self.update_device_status(device_id,"next_add_email")
+            em.tap_img("templates/katana/next_add_email.png")
+            
+            self.update_device_status(device_id,"close_add_mail")
+            em.tap_img("templates/katana/close_add_mail.png")
+            
+            self.update_device_status(device_id,"contact_info")
+            em.tap_img("templates/katana/contact_info.png")
+            em.wait(1)
+            
+            self.update_device_status(device_id,"phone_img")
+            em.tap_img("templates/katana/phone_img.png")
+            
+            self.update_device_status(device_id,"delete_number")
+            em.tap_img("templates/katana/delete_number.png")
+            
+            self.update_device_status(device_id,"confirm_delete_number")
+            em.tap_img("templates/katana/confirm_delete_number.png")
+            
+            #Getting Security Code
+            
+            security_code_count = 0
+            while True:
+                security_code = get_confirmation_code(provider="zoho", primary_email=credentials.email, alias_email=email, password=credentials.pass_mail)
+                security_code_count += 1
+                if(security_code_count == 30):
+                    return
+                if str(security_code).isnumeric():
+                    print("Code Received: "+ security_code)
+                    break
+                self.update_device_status(device_id,f"Security Code: {security_code_count}")
+                em.wait(2)
+            
+            self.update_device_status(device_id,f"Security Code: {security_code}")
+            em.send_text(security_code)
+            em.wait(2)
+            
+            self.update_device_status(device_id,"Click Continue")
+            em.tap_img("templates/katana/continue_security_code.png")
+            
+            em.wait_img("templates/katana/number_deleted.png")
+            self.update_device_status(device_id,"number_deleted")
+            
+            self.update_device_status(device_id,"Getting UID")
+            uid = em.extract_facebook_uid()
+            self.update_device_status(device_id,uid)
+            em.wait(2)
+            
+            self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
+            self.update_device_status(device_id,"Data Saved")
+        
+            em.wait(2)
+            
+            
+        self.update_device_status(device_id,"try_other_way_what_app")
+        em.tap_img("templates/katana/try_other_way_what_app.png")
+        
+        
+        self.update_device_status(device_id,"text_message_check_box")
+        em.tap_img("templates/katana/text_message_check_box.png")
+        
+        self.update_device_status(device_id,"continue_text_message")
+        em.tap_img("templates/katana/continue_text_message.png")
+        
+        
+        self.update_device_status(device_id,"Timeout 60s Get SMS")        
+        wait_sms_count = 0
+        while True:
+            email, latest_code = get_otp(quid)
+            last_sms_code = latest_code
+            wait_sms_count += 1
+            if(wait_sms_count == 60):
+                return
+            if str(last_sms_code).isnumeric():
+                print("Code Received: "+ last_sms_code)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
+            em.wait(1)
+        
+        self.update_device_status(device_id,f"Last SMS: {last_sms_code}")  
+        em.tap_img("templates/katana/last_sms_code.png")
+        em.wait(1)
+        em.send_text(last_sms_code)
+        em.wait(1)
+        
+        self.update_device_status(device_id,"continue_text_message")  
+        em.tap_img("templates/katana/continue_text_message.png")
+        
+        confirm_code_count = 0
+        while True:
+            confirm_code = get_confirmation_code(provider="zoho", primary_email=credentials.email, alias_email=email, password=credentials.pass_mail)
+            confirm_code_count += 1
+            if(confirm_code_count == 30):
+                return
+            if str(confirm_code).isnumeric():
+                print("Code Received: "+ confirm_code)
+                break
+            self.update_device_status(device_id,f"Confirm Code : {confirm_code_count}")
+            em.wait(2)
+        
+        self.update_device_status(device_id,"enter_confirmation_code")  
+        em.tap_img("templates/katana/enter_confirmation_code.png")
+        em.wait(1)
+        em.send_text(confirm_code)
+        em.wait(1)
+        
+        self.update_device_status(device_id,"next_add_email")
+        em.tap_img("templates/katana/next_add_email.png")
+        
+        self.update_device_status(device_id,"close_add_mail")
+        em.tap_img("templates/katana/close_add_mail.png")
+        
+        self.update_device_status(device_id,"contact_info")
+        em.tap_img("templates/katana/contact_info.png")
+        em.wait(1)
+        
+        self.update_device_status(device_id,"phone_img")
+        em.tap_img("templates/katana/phone_img.png")
+        
+        self.update_device_status(device_id,"delete_number")
+        em.tap_img("templates/katana/delete_number.png")
+        
+        self.update_device_status(device_id,"confirm_delete_number")
+        em.tap_img("templates/katana/confirm_delete_number.png")
+        
+        
+        em.wait_img("templates/katana/number_deleted.png")
+        self.update_device_status(device_id,"number_deleted")
+        
+        self.update_device_status(device_id,"Getting UID")
+        uid = em.extract_facebook_uid()
+        self.update_device_status(device_id,uid)
+        em.wait(2)
+        
+        self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
+        self.update_device_status(device_id,"Data Saved")
+        em.wait(2)
         
         
         

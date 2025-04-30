@@ -292,6 +292,8 @@ def generate_info(provider="zoho"):
         domain_list = custom_domain
     elif provider == "five_sim":
         domain_list = zoho_domains
+    elif provider == "gmail":
+        domain_list = zoho_domains
     else:
         raise ValueError("Unsupported provider. Choose 'zoho' or 'yandex'.")
 

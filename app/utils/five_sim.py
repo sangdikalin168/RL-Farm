@@ -195,9 +195,12 @@ class FiveSimAPI:
 
 # # cancel_activation("754867428")
 
-# # activation_id = 754879629
-# api = FiveSimAPI(token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzUzMDgxMjgsImlhdCI6MTc0Mzc3MjEyOCwicmF5IjoiN2YyMTMyMjNmNTcxMjIwMTUzMjM2NDhhM2JiYjM1ZjciLCJzdWIiOjMxMzM0ODR9.aHYVLcrpXSBva917hFbtXAqMgppHuJ5c1yYRzqwEl7QAg8dgehZR7DaWqbbnGhRUThUZqpv6P6NwEDfNa9v2vxFJelwM-XMANchSqOd8vrSht-n1Z_6aLEWefwCYvRHbjT4z3lTB4kJ7X4hkVELiy03PjYvuhCdUGQeV_L0L53LRgrJ2aLi71mv6TZ7MKy7BfYzXmFMaiZ0azH5qbb6jaQR_REPR_1AD0gf4E5-Ue9DP66FunR1UIxtVImZV7Htd0YswQYoJe8-cOrbTlWRMbEoiGfsLjFm17TMj6Ol_tYsdl4d_L6NFWG2mrdd58xGMAM1nnwldzOalkYn1CRRPOg", country="mongolia", operator="virtual21")
-# result = api.get_latest_sms_code(770141971)
-# print(result)
+# # # activation_id = 754879629
+# api = FiveSimAPI(token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzI0NjEwNTMsImlhdCI6MTc0MDkyNTA1MywicmF5IjoiNjFhZTM4NTQ3NmY3OGM0MzlkODk1ZGY2YTkyMTg4NDEiLCJzdWIiOjIwNTQ3OTF9.hBcz9PwIMtnn60JM_dQ5p-glZ_lFb8j3XH0oq8Hkp4QcSo8oT9ezngA-KgwIFn_c-rRoKM81MQOvdIuN7-cdPhUQhsCi3GgiXS2fF1i03GU8qCR61E2rTkDFKNy-Da0g0-T5fPE_bGIqltce_3a-uLXKx5HHiLN1oUgHdX3v0In2ghIsBKIILJDYGwGVppjly3eaitzwpDfBRrkOJoPeEoce22V9FhgFXrn7JXeTugb_G7FLgS7PFecFwt45Cy2Q408PBD81GknqdlcfTNES2K9D6dMoSFykvqC65WEF6Exp3NFM1PBe9N1n0ezoSYzYCGYM_GBk2Uwpvxr2GajJCA", country="argentina", operator="virtual52")
 
-# # print(get_available_number())
+
+# # print(api.get_available_number())
+
+
+# result = api.get_sms(779492177)
+# print(result)
