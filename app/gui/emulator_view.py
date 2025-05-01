@@ -1,5 +1,6 @@
 import random
 import shutil
+import string
 import time
 import ttkbootstrap as ttkb
 from ttkbootstrap import Button
@@ -1204,7 +1205,6 @@ class EmulatorView:
     def register_five_sim(self, device_id, selected_package):
         em = ADBController(device_id)
             
-
         credentials = self.get_email_credentials()
         api_key = self.get_api_key()
         country = self.get_country()
@@ -2608,7 +2608,10 @@ class EmulatorView:
         em.tap_img("templates/katana/enter_email.png")
         em.wait(1)
         
-        em.send_text(alias_email)
+        random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+        new_email = f"eth168+{first_name.lower()}{last_name.lower()}{random_suffix}@zohomail.com"
+        
+        em.send_text(new_email)
         
         em.wait(1)
         
@@ -2624,7 +2627,7 @@ class EmulatorView:
             self.update_device_status(device_id,"Getting Confirmation Code")
             confirm_code_count = 0
             while True:
-                confirm_code = zoho_api_get_security_code(alias_email)
+                confirm_code = zoho_api_get_security_code(new_email)
                 confirm_code_count += 1
                 if(confirm_code_count == 30):
                     return
@@ -2662,7 +2665,7 @@ class EmulatorView:
             
             security_code_count = 0
             while True:
-                security_code = get_confirmation_code(provider="zoho", primary_email=credentials.email, alias_email=email, password=credentials.pass_mail)
+                security_code = zoho_api_get_security_code(new_email)
                 security_code_count += 1
                 if(security_code_count == 30):
                     return
@@ -2693,15 +2696,15 @@ class EmulatorView:
             em.wait(2)
             
             
-        self.update_device_status(device_id,"try_other_way_what_app")
-        em.tap_img("templates/katana/try_other_way_what_app.png")
+        # self.update_device_status(device_id,"try_other_way_what_app")
+        # em.tap_img("templates/katana/try_other_way_what_app.png")
         
         
-        self.update_device_status(device_id,"text_message_check_box")
-        em.tap_img("templates/katana/text_message_check_box.png")
+        # self.update_device_status(device_id,"text_message_check_box")
+        # em.tap_img("templates/katana/text_message_check_box.png")
         
-        self.update_device_status(device_id,"continue_text_message")
-        em.tap_img("templates/katana/continue_text_message.png")
+        # self.update_device_status(device_id,"continue_text_message")
+        # em.tap_img("templates/katana/continue_text_message.png")
         
         
         self.update_device_status(device_id,"Timeout 60s Get SMS")        
@@ -2712,24 +2715,24 @@ class EmulatorView:
             wait_sms_count += 1
             if(wait_sms_count == 60):
                 return
-            if str(last_sms_code).isnumeric():
+            if str(last_sms_code).isnumeric() and last_sms_code != code:
                 print("Code Received: "+ last_sms_code)
                 break
             self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
             em.wait(1)
         
         self.update_device_status(device_id,f"Last SMS: {last_sms_code}")  
-        em.tap_img("templates/katana/last_sms_code.png")
+        em.tap_img("templates/katana/last_sms_code.png",timeout=10)
         em.wait(1)
         em.send_text(last_sms_code)
-        em.wait(1)
+        em.wait(2)
         
         self.update_device_status(device_id,"continue_text_message")  
         em.tap_img("templates/katana/continue_text_message.png")
         
         confirm_code_count = 0
         while True:
-            confirm_code = get_confirmation_code(provider="zoho", primary_email=credentials.email, alias_email=email, password=credentials.pass_mail)
+            confirm_code = zoho_api_get_security_code(new_email)
             confirm_code_count += 1
             if(confirm_code_count == 30):
                 return
