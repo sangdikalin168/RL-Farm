@@ -2608,7 +2608,7 @@ class EmulatorView:
         em.tap_img("templates/katana/enter_email.png")
         em.wait(1)
         
-        em.send_text(email)
+        em.send_text(alias_email)
         
         em.wait(1)
         
@@ -2624,7 +2624,7 @@ class EmulatorView:
             self.update_device_status(device_id,"Getting Confirmation Code")
             confirm_code_count = 0
             while True:
-                confirm_code = zoho_api_get_security_code(email)
+                confirm_code = zoho_api_get_security_code(alias_email)
                 confirm_code_count += 1
                 if(confirm_code_count == 30):
                     return
