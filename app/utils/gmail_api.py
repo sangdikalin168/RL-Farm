@@ -39,12 +39,11 @@ def get_otp(quid):
 
 
 
-# # # Run it directly
+# # # # Run it directly
 # if __name__ == "__main__":
-# #     # get_order()
-# #     # quid = get_order()
+#     quid = get_order()
     
-# #     # print(f"Quid: {quid}")
+#     print(f"Quid: {quid}")
     
-#     email, latest_code = get_otp(11961502)
-#     print(f"Email: {email}, Latest Code: {latest_code}")
+# #     email, latest_code = get_otp(11961502)
+# #     print(f"Email: {email}, Latest Code: {latest_code}")
