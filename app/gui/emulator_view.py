@@ -42,6 +42,7 @@ class EmulatorView:
         self.selected_emulators = {}
         self.selected_package = tk.StringVar(value="com.facebook.katana")
         self.selected_mail = tk.StringVar(value="zoho")
+        self.selected_reg_type = tk.StringVar(value="full")  
         
         self.email_password_mapping = {
             "eth168@zohomail.com": "SeJrd7FY5d2s",
@@ -136,7 +137,7 @@ class EmulatorView:
         self.chrome_checkbox.grid(row=0, column=2, sticky="w", padx=5)
         
         
-        # ✅ Frame for Mode Selection Checkboxes with Border
+        # ✅ Frame for Mail Selection Checkboxes with Border
         mode_selection_frame = ttkb.Labelframe(button_frame, text="Mail Selection", padding=5)
         mode_selection_frame.grid(row=2, column=0, columnspan=6, pady=(5, 0), sticky="w")
 
@@ -213,12 +214,21 @@ class EmulatorView:
         
         # Call the callback right away to update the operator combobox with the default value.
         self.country_selection_changed()
+        
+        # ✅ Reg Novery Or Reg Full
+        reg_type_frame = ttkb.Labelframe(button_frame, text="Reg Type", padding=5)
+        reg_type_frame.grid(row=3, column=0, columnspan=6, pady=(5, 0), sticky="w")
 
-
-        self.selected_mail.trace("w", self.mail_selection_changed)
+        self.type_full_checkbox = ttkb.Radiobutton(reg_type_frame, text="Full", variable=self.selected_reg_type, value="full", style="primary.TRadiobutton")
+        self.type_full_checkbox.grid(row=0, column=0, sticky="w", padx=5)
+        
+        self.type_novery_checkbox = ttkb.Radiobutton(reg_type_frame, text="No Very", variable=self.selected_reg_type, value="novery", style="primary.TRadiobutton")
+        self.type_novery_checkbox.grid(row=0, column=1, sticky="w", padx=5)
+        
+        
         # ✅ Select All Button
         self.select_all_button = ttkb.Button(button_frame, text="Select All", command=self.toggle_select_all, style="primary.TButton")
-        self.select_all_button.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
+        self.select_all_button.grid(row=4, column=0, pady=5, sticky="nsew")
 
 
         # ✅ Dictionary to Store Checkbox States
@@ -922,7 +932,8 @@ class EmulatorView:
             print("Gmail Mode")
             self.register_gmail(device_id,selected_package)
             return
-        
+                
+                
         em = ADBController(device_id)
         
         
@@ -1144,6 +1155,15 @@ class EmulatorView:
 
 
         if skip_idont_get_code == False:
+            if self.selected_reg_type.get() == "novery":
+                self.update_device_status(device_id,"Getting UID")
+                uid = em.extract_facebook_uid()
+                self.update_device_status(device_id,uid)
+                #Save To database
+                self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="Novery")
+                self.update_device_status(device_id,"Novery Acc Saved")
+                return
+                
             em.tap_img("templates/katana/i_dont_get_code.png",timeout=60)
             self.update_device_status(device_id,"i_dont_get_code")
             em.tap_img("templates/katana/confirm_by_email.png")
@@ -1188,8 +1208,6 @@ class EmulatorView:
         detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
         if "appeal.png" in detect_appeal1:
             self.update_device_status(device_id,"appeal")
-            em.run_adb_command(["shell", "svc", "wifi", "disable"])
-            em.run_adb_command(["shell", "svc", "wifi", "enable"])
             em.wait(3)
             return
         
