@@ -1159,6 +1159,7 @@ class EmulatorView:
                 self.update_device_status(device_id,"Getting UID")
                 uid = em.extract_facebook_uid()
                 self.update_device_status(device_id,uid)
+                em.wait(2)
                 #Save To database
                 self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="Novery")
                 self.update_device_status(device_id,"Novery Acc Saved")
