@@ -990,6 +990,8 @@ class EmulatorView:
         
         first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info(provider=self.selected_mail.get()).values()
         
+        print(password)
+        
         
         self.update_device_status(device_id,"Input First Name")
         em.wait(2)
