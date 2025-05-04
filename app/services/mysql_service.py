@@ -143,3 +143,31 @@ class MySQLService:
                 cursor.close()
             if connection:
                 connection.close()
+
+
+    def save_gmail_account(self, first_name,last_name,gmail, password):
+        """Insert a new user into the gmail_account table."""
+        connection = self.get_connection()
+        if not connection:
+            return False
+
+        query = """
+        INSERT INTO gmail_account 
+        (first_name,last_name,gmail, password)
+        VALUES (%s, %s, %s, %s)
+        """
+        params = (first_name,last_name,gmail, password)
+
+        try:
+            cursor = connection.cursor()
+            cursor.execute(query, params)
+            connection.commit()
+            return True
+        except Error as e:
+            print(f"❌ Error saving user: {e}")
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()

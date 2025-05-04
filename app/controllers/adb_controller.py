@@ -24,6 +24,10 @@ class ADBController:
             print(f"❌ Command Failed: {e.stderr.strip() if e.stderr else 'Unknown Error'}")
             return ""
     
+    def long_press(self, x, y, duration=2000):
+        """Simulates a long press at (x, y) coordinates on the device."""
+        self.run_adb_command(["shell", "input", "touchscreen", "swipe", str(x), str(y), str(x), str(y), str(duration)])
+    
     def tap(self, x, y):
         """Simulates a tap at (x, y) coordinates on the device."""
         self.run_adb_command(["shell", "input", "tap", str(x), str(y)])

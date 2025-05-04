@@ -43,6 +43,7 @@ class EmulatorView:
         self.selected_package = tk.StringVar(value="com.facebook.katana")
         self.selected_mail = tk.StringVar(value="zoho")
         self.selected_reg_type = tk.StringVar(value="full")  
+        self.reg_gmail = False
         
         self.email_password_mapping = {
             "eth168@zohomail.com": "SeJrd7FY5d2s",
@@ -118,6 +119,9 @@ class EmulatorView:
 
         self.change_imei_button = ttkb.Button(button_frame, text="Change IMEI", command=self.emulator.change_imei, style="success.TButton")
         self.change_imei_button.grid(row=0, column=5, padx=5)
+        
+        self.reg_gmail_button = ttkb.Button(button_frame, text="Reg Gmail", command=self.start_register_gmail, style="success.TButton")
+        self.reg_gmail_button.grid(row=0, column=6, padx=5)
     
 
         # ✅ Frame for Mode Selection Checkboxes with Border
@@ -269,7 +273,6 @@ class EmulatorView:
         self.load_players()
         self.emulator_tree.bind("<ButtonRelease-1>", self.toggle_checkbox)
 
-    
     def country_selection_changed(self, *args):
         selected_country = self.selected_country.get()
         operators = self.country_operator_mapping.get(selected_country, [])
@@ -543,10 +546,13 @@ class EmulatorView:
                 print(f"🔄 Round {round_number + 1}/{num_rounds} on {device_id}...")
 
                 # ✅ Update UI Status
-                            # ✅ Update UI Status in main thread
+                # ✅ Update UI Status in main thread
                 self.update_device_status(device_id, "Registering...")
 
-                self.register_facebook_account(device_id)  # ✅ Perform Facebook registration
+                if self.reg_gmail:
+                    self.register_gmail_account(device_id)
+                else:
+                    self.register_facebook_account(device_id)  # ✅ Perform Facebook registration
 
                 # ✅ Update UI After Completion
                 self.update_device_status(device_id, "Completed ✅")
@@ -598,6 +604,11 @@ class EmulatorView:
                     break  # ✅ Exit after finding the correct row
 
         self.master.after(0, update)  # ✅ Ensures UI updates happen in the main thread
+
+    def start_register_gmail(self):
+        #Set Reg Gmail to True
+        self.reg_gmail = True
+        self.start_register_action()
 
     def register_facebook_account(self, device_id):
         """Registers a new Facebook account using ADB commands."""
@@ -989,9 +1000,8 @@ class EmulatorView:
         
         
         first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info(provider=self.selected_mail.get()).values()
-        
-        print(password)
-        
+
+
         
         self.update_device_status(device_id,"Input First Name")
         em.wait(2)
@@ -2799,13 +2809,184 @@ class EmulatorView:
         self.update_device_status(device_id,"Data Saved")
         em.wait(2)
         
+    def register_gmail_account(self, device_id):
+        """Registers a new Facebook account using ADB commands."""
+        print(f"📲 Registering Gmail on {device_id}...")
+        
+        em = ADBController(device_id)
+        
+        em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "https://accounts.google.com/signup", "-n", "com.android.chrome/com.google.android.apps.chrome.Main"])
+        
+        self.update_device_status(device_id,"Input First Name")
+        em.tap_img("templates/gmail/input_first_name.png")
+        em.wait(1)
+        
+        first_name, last_name, password, email = five_sim_generate_info(main_email="eth168@zohomail.com")
+        
+        random_number = random.randint(10300, 99399)
+        gmail = f"{first_name.lower()}{last_name.lower()}{random_number}@gmail.com"
+        print(gmail)
+        
+        em.send_text(f"{first_name.lower()}{last_name.lower()}")
+        em.wait(2)
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/gmail/next.png")
+        
+        self.update_device_status(device_id,"Month")
+        em.tap_img("templates/gmail/month.png")
         
         
+        em.tap_img("templates/gmail/may.png")
         
+        em.tap_img("templates/gmail/day.png")
         
+        em.send_text(14)
         
+        em.tap_img("templates/gmail/year.png")
         
+        em.send_text(1997)
         
-        
+        em.tap_img("templates/gmail/gender.png")
 
+        em.tap_img("templates/gmail/male.png")
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/gmail/next.png")
+        
+        api_key = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzUzMDgxMjgsImlhdCI6MTc0Mzc3MjEyOCwicmF5IjoiN2YyMTMyMjNmNTcxMjIwMTUzMjM2NDhhM2JiYjM1ZjciLCJzdWIiOjMxMzM0ODR9.aHYVLcrpXSBva917hFbtXAqMgppHuJ5c1yYRzqwEl7QAg8dgehZR7DaWqbbnGhRUThUZqpv6P6NwEDfNa9v2vxFJelwM-XMANchSqOd8vrSht-n1Z_6aLEWefwCYvRHbjT4z3lTB4kJ7X4hkVELiy03PjYvuhCdUGQeV_L0L53LRgrJ2aLi71mv6TZ7MKy7BfYzXmFMaiZ0azH5qbb6jaQR_REPR_1AD0gf4E5-Ue9DP66FunR1UIxtVImZV7Htd0YswQYoJe8-cOrbTlWRMbEoiGfsLjFm17TMj6Ol_tYsdl4d_L6NFWG2mrdd58xGMAM1nnwldzOalkYn1CRRPOg"
+        
+        five_sim_api = FiveSimAPI(api_key, country="cambodia", operator="virtual49", product = "google")
+        print("Balance: ", five_sim_api.get_balance())
+        
+        self.update_device_status(device_id,"create_own_gmail")
+        em.tap_img("templates/gmail/create_own_gmail.png",timeout=15)
+        em.wait(2)
+        em.send_text(f"{first_name.lower()}{last_name.lower()}{random_number}")
+        
+        em.wait(1)
+        em.tap(441.0,949.8)
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/gmail/next.png",timeout=10)
+        
+        em.wait_img("templates/gmail/confirm_password.png")
+        em.wait(1)
 
+        em.send_text(password)
+        em.wait(1)
+        
+        em.tap_img("templates/gmail/confirm_password.png")
+        em.send_text(password)
+        
+        em.wait(1)
+        em.tap(460.5,836.2)
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/gmail/password_next.png")
+        
+        
+        self.update_device_status(device_id,"Phone Number")
+        em.tap_img("templates/gmail/phone_number.png")
+        
+        five_sim = five_sim_api.get_available_number()
+        while five_sim is None:
+            self.update_device_status(device_id,"No available number found, retrying...")
+            time.sleep(5)  # Wait for 5 seconds before retrying
+            five_sim_api.get_available_number()
+        
+        activation_id = five_sim[0]
+        five_sim_number = five_sim[1]
+        
+        print(activation_id, five_sim_number)
+        
+        em.send_text(five_sim_number)
+        em.wait(1)
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/gmail/next.png")
+        
+        invalid_number = True
+        
+        while invalid_number:
+            phone_number_step = em.detect_templates([
+                "templates/gmail/invalid_number.png", 
+                "templates/gmail/enter_code.png",
+            ])
+            
+            if 'enter_code.png' in phone_number_step:
+                invalid_number = False
+                
+            if 'invalid_number.png' in phone_number_step:
+                invalid_number = True
+                self.update_device_status(device_id,"Invalid Phone")
+                five_sim_api.ban_number(activation_id)
+                five_sim_api.cancel_activation(activation_id)
+                
+                em.long_press(435.2,496.5)
+                em.tap_img("templates/gmail/select_all_number.png")
+                em.wait(2)
+                
+                five_sim = None
+                em.wait(1)
+                
+                while five_sim is None:
+                    five_sim = five_sim_api.get_available_number()
+                    
+                    if five_sim is None:
+                        self.update_device_status(device_id, "No available number found, retrying...")
+                        time.sleep(5)  # Wait before retrying again
+
+                activation_id = five_sim[0]
+                five_sim_number = five_sim[1]
+                em.wait(1)
+                em.send_text(five_sim_number)
+                self.update_device_status(device_id,"Next")
+                em.tap_img("templates/gmail/next.png")
+                em.wait(5)
+
+        self.update_device_status(device_id,"Timeout 60s Get SMS")      
+        em.wait(8)  
+        verify_code_count = 0
+        while True:
+            sms_code = five_sim_api.get_sms(activation_id)
+            verify_code_count += 1
+            if(verify_code_count == 60):
+                five_sim_api.cancel_activation(activation_id)
+                five_sim_api.ban_number(activation_id)
+                self.update_device_status(device_id,"SMS Timeout")
+                return
+            if str(sms_code).isnumeric():
+                print("Code Received: "+ sms_code)
+                break
+            self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
+            em.wait(2)
+        
+        em.send_text(sms_code)
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/gmail/next.png")
+        
+        em.wait(3)
+        
+        em.tap_img("templates/gmail/skip_add_recovery.png")
+        
+        self.update_device_status(device_id,"Next")
+        em.tap_img("templates/gmail/next.png")
+        
+        em.wait_img("templates/gmail/privacy_term.png")
+        
+        em.swipe(496.1,933.7,491.5,148.8,700)
+        em.swipe(496.1,933.7,491.5,148.8,700)
+        em.swipe(496.1,933.7,491.5,148.8,700)
+        
+        em.wait(2)
+        
+        self.update_device_status(device_id,"Agree")
+        em.tap_img("templates/gmail/agree.png")
+        em.wait(15)
+        
+        self.db_service.save_gmail_account(first_name=first_name.lower(),last_name = last_name.lower(),gmail=gmail,password=password)
+        self.update_device_status(device_id,"Data Saved")
+        
+        five_sim_api.finish_number(activation_id)
+        em.wait(3)
