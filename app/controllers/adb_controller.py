@@ -29,33 +29,16 @@ class ADBController:
         self.run_adb_command(["shell", "input", "tap", str(x), str(y)])
 
     def send_text(self, text):
-        """Sends text input to the device using ADB."""
+        """Sends text input to the device."""
         if isinstance(text, tuple):
+            # If it's a tuple, join the elements into a single string
             text = ' '.join(map(str, text))
         else:
+            # Ensure it's a string
             text = str(text)
-
-        # Escape characters that cause issues in ADB shell
-        special_chars = {
-            ' ': '%s',
-            '&': '\\&',
-            '(': '\\(',
-            ')': '\\)',
-            '|': '\\|',
-            '<': '\\<',
-            '>': '\\>',
-            '*': '\\*',
-            '?': '\\?',
-            '"': '\\"',
-            "'": "\\'",
-            '\\': '\\\\',
-        }
-
-        for char, escape in special_chars.items():
-            text = text.replace(char, escape)
-
-        self.run_adb_command(["shell", "input", "text", text])
-
+            
+        escaped_text = text.replace(" ", "%s")
+        self.run_adb_command(["shell", "input", "text", escaped_text])
 
     def open_app(self, package_name):
         """Open an app on the emulator by package name."""
