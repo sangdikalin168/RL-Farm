@@ -1129,15 +1129,14 @@ class EmulatorView:
                 "templates/katana/i_dont_get_code.png",
                 "templates/katana/make_sure.png",
                 "templates/katana/before_send.png",
+                "templates/katana/appeal.png",
             ]
         )
         skip_idont_get_code = False
         
         self.update_device_status(device_id,"Detect Spam")
-        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1:
+        if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1 or "appeal.png" in detected_t1:
             self.update_device_status(device_id,"Spam Device")
-            em.run_adb_command(["shell", "svc", "wifi", "disable"])
-            em.run_adb_command(["shell", "svc", "wifi", "enable"])
             return
         
         if "make_sure.png" in detected_t1:
