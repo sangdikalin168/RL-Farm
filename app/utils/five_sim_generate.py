@@ -14,7 +14,7 @@ def five_sim_generate_info(main_email):
             break
 
     
-    password = "Reelfb@#1992"
+    password = "Reelfb#$&1997"
     random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))  # Random 4-character suffix
 
     email = f"{main_email.split('@')[0]}+{first_name.lower()}{last_name.lower()}{random_suffix}@{main_email.split('@')[1]}"

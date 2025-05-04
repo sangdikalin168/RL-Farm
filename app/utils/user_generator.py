@@ -321,7 +321,7 @@ def generate_info(provider="zoho"):
 
 
     # Password (can replace with generate_secure_password())
-    password = "Reelfb@#1992"
+    password = "Reelfb#$&1997"
 
     return {
         "first_name": first_name,
