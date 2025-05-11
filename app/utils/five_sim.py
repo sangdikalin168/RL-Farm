@@ -37,9 +37,9 @@ class FiveSimAPI:
 
         try:
             response = requests.get(url, headers=headers)
-
+            
             # Check if response body is empty
-            if response.status_code == 200 and response.text.strip():
+            if response.status_code == 200 and response.text != "no free phones":
                 try:
                     data = response.json()
                     activation_id = data.get("id")
@@ -54,7 +54,7 @@ class FiveSimAPI:
                     # print("Error: Response is not valid JSON")
                     return None
             else:
-                print(f"Error {response.status_code}: Empty or Invalid Response")
+                print(response.text)
                 return None
 
         except requests.exceptions.RequestException as e:

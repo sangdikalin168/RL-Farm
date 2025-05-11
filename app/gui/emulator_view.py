@@ -69,7 +69,7 @@ class EmulatorView:
         self.setup_emulator_ui()
 
     def setup_emulator_ui(self):
-        """Setup the Emulator UI Components"""
+        """Setup the Emulator UI Components""" 
         
         ICON_SIZE = (25, 25)  # Define constant for image resizing
 
@@ -217,6 +217,7 @@ class EmulatorView:
         
         # Call the callback right away to update the operator combobox with the default value.
         self.country_selection_changed()
+        self.selected_mail.trace("w", self.mail_selection_changed)
         
         # ✅ Reg Novery Or Reg Full
         reg_type_frame = ttkb.Labelframe(button_frame, text="Reg Type", padding=5)
@@ -229,6 +230,7 @@ class EmulatorView:
         self.type_novery_checkbox.grid(row=0, column=1, sticky="w", padx=5)
         
         
+
         # ✅ Select All Button
         self.select_all_button = ttkb.Button(button_frame, text="Select All", command=self.toggle_select_all, style="primary.TButton")
         self.select_all_button.grid(row=4, column=0, pady=5, sticky="nsew")
