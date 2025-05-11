@@ -38,7 +38,7 @@ def generate_zoho_info():
     
     phone_number = f"+1{area_code}{exchange_code}{subscriber_number}"
     
-    password = "Reelfb@#2016"
+    password = "RLFARM!#666#"
     random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))  # Random 4-character suffix
     email = f"eth168+{random_suffix}@zohomail.com"
     

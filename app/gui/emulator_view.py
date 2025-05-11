@@ -59,7 +59,7 @@ class EmulatorView:
         }
         
         self.country_operator_mapping = {
-            "england": ["virtual38", "virtual51", "virtual52"],
+            "england": ["virtual38", "virtual51", "virtual52", "virtual61"],
             "mongolia": ["virtual21"],
             "cambodia": ["virtual49"],
         }
