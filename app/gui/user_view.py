@@ -45,7 +45,7 @@ class UserView:
         check_live_button.pack(side="left", padx=5)
 
         # Delete Button
-        delete_button = ttkb.Button(filter_frame, text="Delete", style="danger.TButton")
+        delete_button = ttkb.Button(filter_frame, text="Delete", style="danger.TButton", command=self.delete_user_by_type)
         delete_button.pack(side="left", padx=5)
 
         # Refresh Button (Reloads Data from Server)
@@ -119,6 +119,27 @@ class UserView:
         user_types.insert(0, "All")
         self.user_type_dropdown["values"] = user_types
         self.user_type_dropdown.current(0)
+
+    def delete_user_by_type(self):
+        """Delete selected user type from the database."""
+        selected_type = self.user_type_var.get()
+        if selected_type == "All":
+            messagebox.showwarning("Warning", "Please select a specific user type to delete.")
+            return
+
+        confirmation = messagebox.askyesno(
+            "Confirm Deletion",
+            f"Are you sure you want to delete all users of type '{selected_type}'?"
+        )
+        
+        if confirmation:
+            self.db_service.delete_user_by_type(selected_type)
+            #reload the user list
+            self.load_users()
+            #change the dropdown to "All"
+            self.user_type_var.set("All")
+            
+            
 
     def refresh_data(self):
         """Reload user data from the database."""

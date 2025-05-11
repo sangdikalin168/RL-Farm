@@ -144,6 +144,29 @@ class MySQLService:
             if connection:
                 connection.close()
 
+    #delete user by types
+    def delete_user_by_type(self, user_type):
+        """Delete users from the created_users table by type."""
+        connection = self.get_connection()
+        if not connection:
+            return False
+
+        query = "DELETE FROM created_users WHERE acc_type = %s"
+        params = (user_type,)
+
+        try:
+            cursor = connection.cursor()
+            cursor.execute(query, params)
+            connection.commit()
+            return True
+        except Error as e:
+            print(f"❌ Error deleting user: {e}")
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
 
     def save_gmail_account(self, first_name,last_name,gmail, password):
         """Insert a new user into the gmail_account table."""
@@ -171,3 +194,4 @@ class MySQLService:
                 cursor.close()
             if connection:
                 connection.close()
+                
