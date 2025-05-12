@@ -2028,16 +2028,9 @@ class EmulatorView:
             
         detected_t1 = em.detect_templates(
             [
+                "templates/lite/confirm_your_mobile_number.png",
                 "templates/lite/cannot_create_account.png",
                 "templates/lite/we_need_more_info.png",
-                "templates/lite/i_dont_get_code.png",
-                "templates/lite/make_sure.png",
-                "templates/lite/before_send.png",
-                "templates/lite/send_code_vai_sms.png",
-                "templates/lite/confirm_your_mobile.png",
-                "templates/lite/choose_account.png",
-                "templates/lite/no_create_new_account.png",
-                "templates/lite/confirm_by_email_lite.png",
             ]
         )
        
@@ -2048,152 +2041,107 @@ class EmulatorView:
             five_sim_api.cancel_activation(activation_id)
             return
         
-        if "make_sure.png" in detected_t1 or 'confirm_your_mobile.png' in detected_t1:
-            self.update_device_status(device_id,"Make Sure Device")
+        if "confirm_your_mobile_number.png" in detected_t1:
+            self.update_device_status(device_id,"Confirm Your Mobile Number")
+            em.tap_img("templates/lite/send_code_vai_sms.png")
+            em.wait(2)
+            
+            self.update_device_status(device_id,"Continue")
             em.tap_img("templates/lite/continue.png")
         
-        if "before_send.png" in detected_t1:
-            self.update_device_status(device_id,"try_another_way")
-            em.tap_img("templates/lite/try_another_way.png")
+        # if "make_sure.png" in detected_t1 or 'confirm_your_mobile.png' in detected_t1:
+        #     self.update_device_status(device_id,"Make Sure Device")
+        #     em.tap_img("templates/lite/continue.png")
+        
+        # if "before_send.png" in detected_t1:
+        #     self.update_device_status(device_id,"try_another_way")
+        #     em.tap_img("templates/lite/try_another_way.png")
             
-        if "send_code_vai_sms.png" in detected_t1:
-            self.update_device_status(device_id,"send_code_vai_sms")
-            em.tap_img("templates/lite/send_code_vai_sms.png")  
-            em.tap_img("templates/lite/send_code.png") 
-        if "choose_account.png" in detected_t1:
-            self.update_device_status(device_id,"choose_account")  
-            em.tap_img("templates/lite/choose_account.png")
+        # if "choose_account.png" in detected_t1:
+        #     self.update_device_status(device_id,"choose_account")  
+        #     em.tap_img("templates/lite/choose_account.png")
         
     
-            self.update_device_status(device_id,"no_create_new_account") 
-            em.tap_img("templates/lite/no_create_new_account.png")
+        #     self.update_device_status(device_id,"no_create_new_account") 
+        #     em.tap_img("templates/lite/no_create_new_account.png")
         
-            self.update_device_status(device_id,"send_code_vai_sms")
-            em.tap_img("templates/lite/send_code_vai_sms.png")  
-            em.tap_img("templates/lite/send_code.png") 
+        #     self.update_device_status(device_id,"send_code_vai_sms")
+        #     em.tap_img("templates/lite/send_code_vai_sms.png")  
+        #     em.tap_img("templates/lite/send_code.png") 
         
-        if "no_create_new_account.png" in detected_t1:
-            self.update_device_status(device_id,"no_create_new_account")  
-            em.tap_img("templates/lite/no_create_new_account.png")
-        if "templates/lite/confirm_by_email_lite.png" in detected_t1:
-            self.update_device_status(device_id,"Wait SMS Textbox") 
+        # if "no_create_new_account.png" in detected_t1:
+        #     self.update_device_status(device_id,"no_create_new_account")  
+        #     em.tap_img("templates/lite/no_create_new_account.png")
+        # if "templates/lite/confirm_by_email_lite.png" in detected_t1:
+        #     self.update_device_status(device_id,"Wait SMS Textbox") 
 
         self.update_device_status(device_id,"Wait SMS Textbox")   
-        em.wait_img("templates/lite/sms_code_textbox.png")
+        em.wait_imgs(["templates/lite/sms_code_textbox.png", "templates/lite/enter_the_confirmation_code.png"],timeout=30)
         
 
-        self.update_device_status(device_id,"Timeout 60s Get SMS")      
+        self.update_device_status(device_id,"Getting SMS....")      
         em.wait(8)  
         verify_code_count = 0
         while True:
-            sms_code = five_sim_api.get_sms(activation_id)
+            sms_code = five_sim_api.get_sms(activation_id)  
             verify_code_count += 1
             if(verify_code_count == 30):
                 five_sim_api.cancel_activation(activation_id)
                 return
             if str(sms_code).isnumeric():
                 print("Code Received: "+ sms_code)
-                em.tap_img("templates/lite/sms_code_textbox.png")
-                em.wait(2)
                 break
             self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
             em.wait(2)
 
         self.update_device_status(device_id,f"SMS Code: {sms_code}")
         
-        for char in sms_code:
-            em.send_text(char)
-            em.wait(0.2)
-            
-        em.wait(1)
         
+        code_text_box_template = em.detect_templates(["templates/lite/sms_code_textbox.png", "templates/lite/enter_the_confirmation_code.png"])
         
-        self.update_device_status(device_id,"ok_confirm_code")
-        em.tap_img("templates/lite/ok_confirm_code.png")
+        if "enter_the_confirmation_code.png" in code_text_box_template:
+            self.update_device_status(device_id,"Entering SMS Code")
+            em.send_text(sms_code)
+            em.wait(1)
+            em.tap_img("templates/lite/next.png")
 
-        self.update_device_status(device_id,"skip_add_profile")
-        em.wait_img("templates/lite/skip_add_profile.png",timeout=30)
-        
-        self.update_device_status(device_id,"Close App...")
-        em.run_adb_command(["shell", "am", "force-stop", "com.facebook.lite"])
-        em.wait(2)
-        
-        self.update_device_status(device_id,"Opening App...")
-        em.open_app(selected_package)
-        
-        
-        detect_appeal = em.detect_templates(
-            [
-                "templates/lite/skip_add_profile.png",
-                "templates/lite/refresh.png",
-            ]
-        )
-        
-        if "refresh.png" in detect_appeal:
-            self.update_device_status(device_id,"Spam")
-            em.wait(200)
-            return
         else:
-            self.update_device_status(device_id,"skip_add_profile")
-        
-        em.wait(10)
-        
-        self.update_device_status(device_id,"skip_add_profile")
-        em.tap_img("templates/lite/skip_add_profile.png",timeout=30)
-        
-        
-        template_113 = em.detect_templates(
-            [
-                "templates/lite/user_img.png",
-                "templates/lite/import_contact.png"
-            ]
-        )
-        
-        if "import_contact.png" in template_113:
-            self.update_device_status(device_id,"import_contact")
-            em.tap_img("templates/lite/import_contact.png",timeout=20)
-            em.wait(10)
-            
-            detect_fri_list = em.detect_templates([
-                "templates/lite/user_img.png",
-                "templates/lite/skip_add_friend.png"
-            ])
-            
-            if "user_img.png" in detect_fri_list:
-                self.update_device_status(device_id,"Skip To Home Page")
-            if "skip_add_friend.png" in detect_fri_list:
-                self.update_device_status(device_id,"skip_add_friend")
-                em.wait(2)
-                self.update_device_status(device_id,"skip_add_friend")
-                em.tap_img("templates/lite/skip_add_friend.png",timeout=30)
-            
-                em.wait(10)
-                self.update_device_status(device_id,"skip_add_friend_list")
-                em.tap_img("templates/lite/skip_add_friend_list.png",timeout=30)
+            self.update_device_status(device_id,"Entering SMS Code") 
+            em.tap_img("templates/lite/sms_code_textbox.png")
+            for char in sms_code:
+                em.send_text(char)
+                em.wait(0.2)
                 
-                em.wait(2)
-                #Confirm Skip Add Friend List
-                em.tap_img("templates/lite/confirm_skip_add_fri.png",timeout=30)
+            em.wait(1)
+            self.update_device_status(device_id,"ok_confirm_code")
+            em.tap_img("templates/lite/ok_confirm_code.png")
+
+        self.update_device_status(device_id,"Detect Appeal")
+        em.wait_img("templates/lite/skip_add_profile.png",timeout=30)
+            
+        em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "https://www.facebook.com/settings", "com.facebook.lite"])
         
-        if "user_img.png" in template_113:
-            self.update_device_status(device_id,"Skip To Home Page")
+        #Close Facebook Lite App
+        self.update_device_status(device_id,"Close Facebook Lite App")
+        em.run_adb_command(["shell", "am", "force-stop", "com.facebook.lite"])
+        em.wait(5)
         
-        self.update_device_status(device_id,"menu_bar")
-        em.tap_img("templates/lite/menu_bar.png",timeout=30)
-        em.wait(3)
+        self.update_device_status(device_id,"Open Facebook Lite App")
+        #Open Facebook Lite App
+        em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "https://www.facebook.com/settings", "com.facebook.lite"])
         
-        self.update_device_status(device_id,"Swipe To Setting")
-        em.swipe(270.0,941.6,272.3,202.4,700)
+        em.wait(5)  
         
+        self.update_device_status(device_id,"Detect Appeal")
+        detect_appeal1 = em.detect_templates(["templates/lite/help.png", "templates/lite/refresh.png","templates/lite/account_center.png"],timeout=30)
+        if "help.png" in detect_appeal1 or "refresh.png" in detect_appeal1:
+            self.update_device_status(device_id,"Appeal")
+            em.wait(120)
+            return
         
-        em.wait(2)
+        if "account_center.png" in detect_appeal1:
+            self.update_device_status(device_id,"Goto Account Center")
         
-        self.update_device_status(device_id,"Setting & Privacy")
-        em.tap_img("templates/lite/setting_and_privacy.png",timeout=30)
-        
-        
-        self.update_device_status(device_id,"Setting")
-        em.tap_img("templates/lite/setting.png",timeout=30)
         
         self.update_device_status(device_id,"Account Center")
         em.tap_img("templates/lite/account_center.png",timeout=30)
@@ -2219,9 +2167,8 @@ class EmulatorView:
         em.send_text(email)
         
         em.wait(1)
-        em.tap_img("templates/lite/account_checkbox.png",timeout=30)
         
-        
+        self.update_device_status(device_id,"next_add_email")
         em.tap_img("templates/lite/next_add_email.png",timeout=30)
         
         self.update_device_status(device_id,"try_other_way_what_app")
@@ -2235,7 +2182,7 @@ class EmulatorView:
         
         em.tap_img("templates/lite/continue_message.png")
         
-        self.update_device_status(device_id,"Timeout 60s Get SMS")        
+        self.update_device_status(device_id,"Getting Last SMS")        
         wait_sms_count = 0
         while True:
             last_sms_code = five_sim_api.get_latest_sms_code(activation_id)
@@ -2247,7 +2194,7 @@ class EmulatorView:
             if str(last_sms_code).isnumeric() and last_sms_code != sms_code:
                 print("Code Received: "+ last_sms_code)
                 break
-            self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
+            self.update_device_status(device_id,f"Getting Last SMS: {wait_sms_count}")
             em.wait(1)
             em.tap_img("templates/lite/get_new_code.png",timeout=2)
         
