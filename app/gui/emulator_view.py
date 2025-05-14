@@ -59,7 +59,7 @@ class EmulatorView:
         }
         
         self.country_operator_mapping = {
-            "england": ["virtual38", "virtual51", "virtual52", "virtual61"],
+            "england": ["virtual38", "virtual51", "virtual52", "virtual60","virtual61"],
             "mongolia": ["virtual21"],
             "cambodia": ["virtual49"],
         }
@@ -2130,7 +2130,7 @@ class EmulatorView:
         #Open Facebook Lite App
         em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "https://www.facebook.com/settings", "com.facebook.lite"])
         
-        em.wait(5)  
+        em.tap_img("templates/lite/allow_cookie.png",timeout=10)
         
         self.update_device_status(device_id,"Detect Appeal")
         detect_appeal1 = em.detect_templates(["templates/lite/help.png", "templates/lite/refresh.png","templates/lite/account_center.png"],timeout=30)
