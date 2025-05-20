@@ -5,6 +5,8 @@ import time
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 import cv2
+from pyzbar.pyzbar import decode
+from urllib.parse import parse_qs, urlparse
 
 
 class ADBController:
@@ -491,3 +493,34 @@ class ADBController:
         else:
             print("❌ UID not found in the XML.")
             return None
+    
+    def image_to_2fa(self):
+        """Extracts 2FA code from the screenshot of the Facebook app."""
+        screenshot_folder = "screenshots"
+        os.makedirs(screenshot_folder, exist_ok=True)
+        screenshot_path = os.path.join(screenshot_folder, f"screenshot_{re.sub(r'[^a-zA-Z0-9]', '_', self.device_id)}.png")
+        
+        # ✅ Take a fresh screenshot
+        self.take_screenshot(screenshot_path)
+        
+        image = cv2.imread(screenshot_path)
+        
+        # Decode the QR code(s)
+        decoded_objects = decode(image)
+        
+                # Process and print the results
+        if decoded_objects:
+            for obj in decoded_objects:
+                # print("QR Code Data:", obj.data.decode('utf-8'))
+                # print("QR Code Type:", obj.type)
+                # Parse the URI
+                parsed = urlparse(obj.data.decode('utf-8'))
+                # Extract key components
+                scheme = parsed.scheme  # otpauth
+                path = parsed.path.split(":")  # Split the identifier
+                query = parse_qs(parsed.query)  # Parse query parameters
+                secret = query.get("secret", [""])[0]
+                formatted_secret = ' '.join(secret[i:i+4] for i in range(0, len(secret), 4))
+            return formatted_secret
+        else:
+            print("No QR code detected.")

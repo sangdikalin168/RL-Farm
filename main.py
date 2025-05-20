@@ -2,10 +2,8 @@ from app.gui.main_window import MainWindow
 from app.services.mysql_service import MySQLService
 import ttkbootstrap as ttkb
 from dotenv import load_dotenv
-import sys
-sys.stdout.reconfigure(encoding="utf-8")
 
-def center_window(window, width=1800, height=700):
+def center_window(window, width=1800, height=900):
     """Center the application window on the screen."""
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()

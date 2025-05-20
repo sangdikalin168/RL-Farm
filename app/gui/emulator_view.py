@@ -2,7 +2,7 @@ import random
 import shutil
 import string
 import time
-from pyautogui import PRIMARY
+import pyotp
 import ttkbootstrap as ttkb
 from ttkbootstrap import Button
 from tkinter import messagebox
@@ -14,6 +14,7 @@ import ttkbootstrap as ttkb
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import os
+import sys
 from app.services.mysql_service import MySQLService
 from app.controllers.emulator_controller import MuMuPlayerController
 from concurrent.futures import ThreadPoolExecutor
@@ -25,9 +26,11 @@ from app.utils.five_sim import FiveSimAPI
 from app.utils.five_sim_generate import five_sim_generate_info
 from app.utils.gmail_api import get_order, get_otp
 from app.utils.user_generator import generate_info
+from app.utils.vietnam_api import get_otp_stp, rent_gmail
 from app.utils.zoho import get_confirmation_code
 from app.utils.zoho_api import zoho_api_get_confirmation_code, zoho_api_get_security_code
 from app.utils.zoho_generate import generate_zoho_info
+
 
 from dataclasses import dataclass
 @dataclass
@@ -44,7 +47,9 @@ class EmulatorView:
         self.selected_package = tk.StringVar(value="com.facebook.katana")
         self.selected_mail = tk.StringVar(value="zoho")
         self.selected_reg_type = tk.StringVar(value="full")  
+        self.two_factor_checked = tk.StringVar(value="false")  # Default to "false" (No 2FA)
         self.reg_gmail = False
+
         
         self.email_password_mapping = {
             "eth168@zohomail.com": "SeJrd7FY5d2s",
@@ -123,10 +128,19 @@ class EmulatorView:
                 
 
 
+        def resource_path(relative_path):
+            try:
+                # PyInstaller stores temp files here
+                base_path = sys._MEIPASS
+            except AttributeError:
+                base_path = os.path.abspath(".")
+            return os.path.join(base_path, relative_path)
+
         # ✅ Function to Load Icons
         def load_icon(filename):
             try:
-                return ImageTk.PhotoImage(Image.open(os.path.join("assets", filename)).resize(ICON_SIZE, Image.Resampling.LANCZOS))
+                path = resource_path(os.path.join("assets", filename))
+                return ImageTk.PhotoImage(Image.open(path).resize(ICON_SIZE, Image.Resampling.LANCZOS))
             except FileNotFoundError:
                 print(f"Warning: {filename} not found.")
                 return None
@@ -270,9 +284,9 @@ class EmulatorView:
         # ✅ 2FA Or No 2FA 
         reg_two_factor_frame = ttkb.Labelframe(button_frame_4, text="2FA", padding=5)
         reg_two_factor_frame.grid(row=0, column=2,padx=(10,0), sticky="w")
-        self.type_2fa_checkbox = ttkb.Radiobutton(reg_two_factor_frame, text="2FA", variable=self.selected_reg_type, value="2fa", style="primary.TRadiobutton")
+        self.type_2fa_checkbox = ttkb.Radiobutton(reg_two_factor_frame, text="2FA", variable=self.two_factor_checked, value="true", style="primary.TRadiobutton")
         self.type_2fa_checkbox.grid(row=0, column=0, sticky="w", padx=5)
-        self.type_no_2fa_checkbox = ttkb.Radiobutton(reg_two_factor_frame, text="No 2FA", variable=self.selected_reg_type, value="no_2fa", style="primary.TRadiobutton")
+        self.type_no_2fa_checkbox = ttkb.Radiobutton(reg_two_factor_frame, text="No 2FA", variable=self.two_factor_checked, value="false", style="primary.TRadiobutton")
         self.type_no_2fa_checkbox.grid(row=0, column=1, sticky="w", padx=5)
         
         
@@ -989,7 +1003,7 @@ class EmulatorView:
             print("Gmail Mode")
             self.register_gmail(device_id,selected_package)
             return
-                
+
                 
         em = ADBController(device_id)
         
@@ -1045,11 +1059,9 @@ class EmulatorView:
             self.update_device_status(device_id,"Get Started")
             em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
         
-        
+
         first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info(provider=self.selected_mail.get()).values()
 
-
-        
         self.update_device_status(device_id,"Input First Name")
         em.wait(2)
         em.send_text(first_name)
@@ -1230,7 +1242,10 @@ class EmulatorView:
         em.tap_img("templates/katana/email.png")
         
         em.wait(1)
+        
+
         em.send_text(alias_email)
+    
         em.wait(1)
         
         em.tap_img("templates/katana/next.png")
@@ -2303,6 +2318,32 @@ class EmulatorView:
         five_sim_api.finish_number(activation_id)
         em.wait(2)
         
+    def get_2fa_code(self, two_factor_key):
+        print(two_factor_key)
+        try:
+            # Remove spaces from the key
+            key = two_factor_key.replace(" ", "")
+            
+            # Validate that the key is not empty or too short
+            if not key or len(key) < 16:
+                raise ValueError("Invalid 2FA key. It should be at least 16 characters long.")
+            
+            # Create a TOTP object using the key
+            totp = pyotp.TOTP(key)
+            
+            # Get and return the current 2FA code
+            return totp.now()
+
+        except ValueError as ve:
+            # Handle cases where the key is invalid
+            print(f"2FA Error: {ve}")
+            return None
+
+        except Exception as e:
+            # Handle any other unexpected errors
+            print(f"An unexpected error occurred: {e}")
+            return None
+    
     def register_gmail(self, device_id, selected_package):
         em = ADBController(device_id)
             
@@ -2556,15 +2597,30 @@ class EmulatorView:
 
         em.tap_img("templates/katana/email.png")
         
-        quid = get_order()
-        em.wait(1)
-        print(quid)
-        email, latest_code = get_otp(quid)
         
-        print(email)
+        rented_email = ""
+
+        while True:
+            rented_email = rent_gmail()
+            if "No rented email" in rented_email:
+                print("No rented email")
+                self.update_device_status(device_id,"No rented email")
+                em.wait(2)
+                continue
+            break
+        
+        print(rented_email)
+        
+        
+        # quid = get_order()
+        # em.wait(1)
+        # print(quid)
+        # email, latest_code = get_otp(quid)
+        
+        # print(email)
         
         em.wait(1)
-        em.send_text(email)
+        em.send_text(rented_email)
         em.wait(1)
         
         em.tap_img("templates/katana/next.png")
@@ -2572,10 +2628,30 @@ class EmulatorView:
         
         em.wait(5)
         
+        # verify_code_count = 0
+        # while True:
+            
+        #     email, latest_code = get_otp(quid)
+        #     code = latest_code
+            
+        #     verify_code_count += 1
+            
+        #     if(verify_code_count == 60):
+        #         return
+        #     if str(code).isnumeric():
+        #         print("Code Received: "+ code)
+        #         break
+        #     self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}s")
+        #     em.wait(1)
+        
+        
+
+        
+        
         verify_code_count = 0
         while True:
             
-            email, latest_code = get_otp(quid)
+            latest_code = get_otp_stp(rented_email)
             code = latest_code
             
             verify_code_count += 1
@@ -2587,7 +2663,7 @@ class EmulatorView:
                 break
             self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}s")
             em.wait(1)
-
+        
         em.send_text(code)
         
         em.tap_img("templates/katana/next.png")
@@ -2713,27 +2789,31 @@ class EmulatorView:
             self.update_device_status(device_id,uid)
             em.wait(2)
             
-            self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
+            self.db_service.save_user(uid=uid, password=password, two_factor="", email=new_email, pass_mail="", acc_type="No 2FA")
             self.update_device_status(device_id,"Data Saved")
         
             em.wait(2)
             
-            
-        # self.update_device_status(device_id,"try_other_way_what_app")
-        # em.tap_img("templates/katana/try_other_way_what_app.png")
         
         
-        # self.update_device_status(device_id,"text_message_check_box")
-        # em.tap_img("templates/katana/text_message_check_box.png")
-        
-        # self.update_device_status(device_id,"continue_text_message")
-        # em.tap_img("templates/katana/continue_text_message.png")
-        
+        # self.update_device_status(device_id,"Timeout 60s Get SMS")        
+        # wait_sms_count = 0
+        # while True:
+        #     email, latest_code = get_otp(quid)
+        #     last_sms_code = latest_code
+        #     wait_sms_count += 1
+        #     if(wait_sms_count == 60):
+        #         return
+        #     if str(last_sms_code).isnumeric() and last_sms_code != code:
+        #         print("Code Received: "+ last_sms_code)
+        #         break
+        #     self.update_device_status(device_id,f"Waiting Verify Code: {wait_sms_count}")
+        #     em.wait(1)
         
         self.update_device_status(device_id,"Timeout 60s Get SMS")        
         wait_sms_count = 0
         while True:
-            email, latest_code = get_otp(quid)
+            latest_code = get_otp_stp(rented_email)
             last_sms_code = latest_code
             wait_sms_count += 1
             if(wait_sms_count == 60):
@@ -2799,10 +2879,55 @@ class EmulatorView:
         self.update_device_status(device_id,uid)
         em.wait(2)
         
-        self.db_service.save_user(uid=uid, password=password, two_factor="", email=email, pass_mail="", acc_type="No 2FA")
+        if self.two_factor_checked.get() == "true":
+            em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
+            self.update_device_status(device_id,"Two Factor")
+            em.tap_img("templates/katana/arrow_icon.png")
+            
+            em.tap_img("templates/katana/next.png")
+            
+            em.swipe(460.5,825.4,472.4,416.2)
+            
+            #Screen Shot QR CODE
+            clipboard_2fa = em.image_to_2fa()
+            print(clipboard_2fa)
+            self.update_device_status(device_id,f"2FA Key: {clipboard_2fa}")  
+            
+            em.tap_img("templates/katana/next.png")
+            
+            self.update_device_status(device_id,"Waiting 2FA Code")
+            two_factor_code_count = 0
+            while True:
+                self.update_device_status(device_id,f"Waiting 2FA Code:{two_factor_code_count}s")
+                two_factor_code = self.get_2fa_code(clipboard_2fa)
+                two_factor_code_count += 1
+                if str(two_factor_code).isnumeric():
+                    self.update_device_status(device_id, f"2FA Code Received {two_factor_code}")
+                    print("Code Received: "+ two_factor_code)
+                    break
+                if(two_factor_code_count == 30):
+                    return
+                em.wait(1)
+            
+            em.tap_img("templates/katana/enter_two_factor_code.png")
+            em.wait(1)
+            em.send_text(two_factor_code)
+            em.wait(1)
+            em.tap_img("templates/katana/next.png")
+            
+            em.wait(1)
+            em.send_text(password)
+            
+            em.tap_img("templates/katana/continue.png")
+            
+            
+            self.db_service.save_user(uid=uid, password=password, two_factor="clipboard_2fa", email=new_email, pass_mail="", acc_type="2FA")
+        else:
+            self.db_service.save_user(uid=uid, password=password, two_factor="", email=new_email, pass_mail="", acc_type="No 2FA")
         self.update_device_status(device_id,"Data Saved")
         em.wait(2)
         
+
     def register_gmail_account(self, device_id):
         """Registers a new Facebook account using ADB commands."""
         print(f"📲 Registering Gmail on {device_id}...")

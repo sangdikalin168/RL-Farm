@@ -2,3 +2,20 @@
 #ingore all files in screenshots folder
 screenshots/*
 **/__pycache__/
+
+
+# Temporary files
+*.pyc
+__pycache__/
+
+# IDE-specific files
+.vscode/
+
+# Build artifacts
+dist/
+build/
+*.spec
+
+# Other ignored files
+*.log
+*.tmp
