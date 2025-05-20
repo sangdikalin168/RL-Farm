@@ -2,6 +2,7 @@ import random
 import shutil
 import string
 import time
+from pyautogui import PRIMARY
 import ttkbootstrap as ttkb
 from ttkbootstrap import Button
 from tkinter import messagebox
@@ -73,19 +74,54 @@ class EmulatorView:
         
         ICON_SIZE = (25, 25)  # Define constant for image resizing
 
-        # ✅ Frame for Emulator Treeview
-        emulator_frame = ttkb.Frame(self.master, padding=5)
-        emulator_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        # Create main frame
+        main_frame = ttkb.Frame(self.master, padding=5)
+        main_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        
+        # Configure grid weights
+        main_frame.grid_rowconfigure(0, weight=0)  # Buttons rows
+        main_frame.grid_rowconfigure(1, weight=0)  # Buttons rows
+        main_frame.grid_rowconfigure(2, weight=0)  # Buttons rows
+        main_frame.grid_rowconfigure(3, weight=0)  # Buttons rows
+        
+        
+        # Row 0: First set of buttons
+        button_frame_1 = ttkb.Frame(main_frame, padding=5)
+        button_frame_1.grid(row=0, column=0, sticky="ew")
+        
+        
+        # Row 1: Second set of buttons
+        button_frame_2 = ttkb.Frame(main_frame, padding=5)
+        button_frame_2.grid(row=1, column=0, sticky="ew")
 
-        # ✅ Ensure frame expands
-        self.master.grid_rowconfigure(0, weight=1)
-        self.master.grid_columnconfigure(0, weight=1)
-        emulator_frame.grid_rowconfigure(1, weight=1)  
-        emulator_frame.grid_columnconfigure(0, weight=1)
 
-        # ✅ Button Frame (Top of Emulator Tree)
-        button_frame = ttkb.Frame(emulator_frame)
-        button_frame.grid(row=0, column=0, padx=0, pady=10, sticky="w")
+        # Row 2: Third set of buttons
+        button_frame_3 = ttkb.Frame(main_frame, padding=5)
+        button_frame_3.grid(row=2, column=0, sticky="ew")
+        
+        # Row 3: Fourth set of buttons
+        button_frame_4 = ttkb.Frame(main_frame, padding=5)
+        button_frame_4.grid(row=3, column=0, sticky="ew")
+        
+        
+        # Row 4: Fifth set of buttons
+        button_frame_5 = ttkb.Frame(main_frame, padding=5)
+        button_frame_5.grid(row=4, column=0, sticky="ew")
+        
+        # ✅ Frame for Emulator List with Border
+        emulator_frame = ttkb.Labelframe(main_frame, text="Emulator List", padding=5)
+        emulator_frame.grid(row=5, column=0, columnspan=6, pady=(5, 0), sticky="nsew")
+        # ✅ Configure grid weights for emulator_frame
+        emulator_frame.grid_rowconfigure(0, weight=0)  # Header row
+        emulator_frame.grid_rowconfigure(1, weight=1)  # TreeView row
+        emulator_frame.grid_columnconfigure(0, weight=1)  # TreeView column
+        emulator_frame.grid_columnconfigure(1, weight=0)  # Scrollbar column
+        emulator_frame.grid_columnconfigure(2, weight=0)  # Scrollbar column
+        emulator_frame.grid_columnconfigure(3, weight=0)  # Scrollbar column
+        emulator_frame.grid_columnconfigure(4, weight=0)  # Scrollbar column
+        emulator_frame.grid_columnconfigure(5, weight=0)  # Scrollbar column
+                
+
 
         # ✅ Function to Load Icons
         def load_icon(filename):
@@ -102,31 +138,31 @@ class EmulatorView:
 
         # ✅ Start & Stop Buttons
         if self.start_photo:
-            start_button = ttkb.Button(button_frame, image=self.start_photo, command=self.start_selected_players, style="success.Compact.TButton", width=20, padding=2)
+            start_button = ttkb.Button(button_frame_1, image=self.start_photo, command=self.start_selected_players, style="success.Compact.TButton", width=20, padding=2)
             start_button.grid(row=0, column=0, padx=5)
 
         if self.stop_photo:
-            stop_button = ttkb.Button(button_frame, image=self.stop_photo, command=self.stop_selected_players, style="danger.Compact.TButton", width=20, padding=2)
+            stop_button = ttkb.Button(button_frame_1, image=self.stop_photo, command=self.stop_selected_players, style="danger.Compact.TButton", width=20, padding=2)
             stop_button.grid(row=0, column=1, padx=5)
 
         if self.sort_photo:
-            sort_button = ttkb.Button(button_frame, image=self.sort_photo, command=self.sort_emulators, style="info.Compact.TButton", width=20, padding=2)
+            sort_button = ttkb.Button(button_frame_1, image=self.sort_photo, command=self.sort_emulators, style="info.Compact.TButton", width=20, padding=2)
             sort_button.grid(row=0, column=2, padx=5)
 
         # ✅ Start Register Button (Moved to the same row as Change IMEI)
-        self.start_register_button = ttkb.Button(button_frame, text="Start Register", command=self.start_register_action, style="success.TButton")
+        self.start_register_button = ttkb.Button(button_frame_1, text="Start Register", command=self.start_register_action, style="success.TButton")
         self.start_register_button.grid(row=0, column=3, padx=5)
 
-        self.change_imei_button = ttkb.Button(button_frame, text="Change IMEI", command=self.emulator.change_imei, style="success.TButton")
+        self.change_imei_button = ttkb.Button(button_frame_1, text="Change IMEI", command=self.emulator.change_imei, style="success.TButton")
         self.change_imei_button.grid(row=0, column=5, padx=5)
         
-        self.reg_gmail_button = ttkb.Button(button_frame, text="Reg Gmail", command=self.start_register_gmail, style="success.TButton")
+        self.reg_gmail_button = ttkb.Button(button_frame_1, text="Reg Gmail", command=self.start_register_gmail, style="success.TButton")
         self.reg_gmail_button.grid(row=0, column=6, padx=5)
     
 
         # ✅ Frame for Mode Selection Checkboxes with Border
-        register_frame = ttkb.Labelframe(button_frame, text="FB Selection", padding=5)
-        register_frame.grid(row=1, column=0, columnspan=6, pady=(5, 0), sticky="w")
+        register_frame = ttkb.Labelframe(button_frame_2, text="FB Selection", padding=5)
+        register_frame.grid(row=0, column=0, columnspan=6, pady=(5, 0), sticky="w")
 
         # ✅ Lite Checkbox
         self.lite_checkbox = ttkb.Radiobutton(register_frame, text="Lite", variable=self.selected_package, value="com.facebook.lite", style="primary.TRadiobutton")
@@ -141,7 +177,7 @@ class EmulatorView:
         
         
         # ✅ Frame for Mail Selection Checkboxes with Border
-        mode_selection_frame = ttkb.Labelframe(button_frame, text="Mail Selection", padding=5)
+        mode_selection_frame = ttkb.Labelframe(button_frame_3, text="Mail Selection", padding=5)
         mode_selection_frame.grid(row=2, column=0, columnspan=6, pady=(5, 0), sticky="w")
 
         self.zoho_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Zoho", variable=self.selected_mail, value="zoho", style="primary.TRadiobutton")
@@ -150,7 +186,7 @@ class EmulatorView:
         self.yandex_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Yandex", variable=self.selected_mail, value="yandex", style="primary.TRadiobutton")
         self.yandex_checkbox.grid(row=0, column=1, sticky="w", padx=5)
         
-        self.customer_email_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Custom", variable=self.selected_mail, value="custom", style="primary.TRadiobutton")
+        self.customer_email_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Domain", variable=self.selected_mail, value="custom", style="primary.TRadiobutton")
         self.customer_email_checkbox.grid(row=0, column=2, sticky="w", padx=5)
 
         self.five_sim_checkbox = ttkb.Radiobutton(mode_selection_frame, text="5SIM", variable=self.selected_mail, value="five_sim", style="primary.TRadiobutton")
@@ -219,9 +255,9 @@ class EmulatorView:
         self.country_selection_changed()
         self.selected_mail.trace("w", self.mail_selection_changed)
         
-        # ✅ Reg Novery Or Reg Full
-        reg_type_frame = ttkb.Labelframe(button_frame, text="Reg Type", padding=5)
-        reg_type_frame.grid(row=3, column=0, columnspan=6, pady=(5, 0), sticky="w")
+        # ✅ Reg Novery Or Reg Full 2FA Or No 2FA 
+        reg_type_frame = ttkb.Labelframe(button_frame_4, text="Reg Type", padding=5)
+        reg_type_frame.grid(row=0, column=0, sticky="w")
 
         self.type_full_checkbox = ttkb.Radiobutton(reg_type_frame, text="Full", variable=self.selected_reg_type, value="full", style="primary.TRadiobutton")
         self.type_full_checkbox.grid(row=0, column=0, sticky="w", padx=5)
@@ -230,9 +266,18 @@ class EmulatorView:
         self.type_novery_checkbox.grid(row=0, column=1, sticky="w", padx=5)
         
         
-
+        
+        # ✅ 2FA Or No 2FA 
+        reg_two_factor_frame = ttkb.Labelframe(button_frame_4, text="2FA", padding=5)
+        reg_two_factor_frame.grid(row=0, column=2,padx=(10,0), sticky="w")
+        self.type_2fa_checkbox = ttkb.Radiobutton(reg_two_factor_frame, text="2FA", variable=self.selected_reg_type, value="2fa", style="primary.TRadiobutton")
+        self.type_2fa_checkbox.grid(row=0, column=0, sticky="w", padx=5)
+        self.type_no_2fa_checkbox = ttkb.Radiobutton(reg_two_factor_frame, text="No 2FA", variable=self.selected_reg_type, value="no_2fa", style="primary.TRadiobutton")
+        self.type_no_2fa_checkbox.grid(row=0, column=1, sticky="w", padx=5)
+        
+        
         # ✅ Select All Button
-        self.select_all_button = ttkb.Button(button_frame, text="Select All", command=self.toggle_select_all, style="primary.TButton")
+        self.select_all_button = ttkb.Button(button_frame_5, text="Select All", command=self.toggle_select_all, style="primary.TButton")
         self.select_all_button.grid(row=4, column=0, pady=5, sticky="nsew")
 
 
