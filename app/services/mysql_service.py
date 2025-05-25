@@ -116,6 +116,34 @@ class MySQLService:
                 cursor.close()
             if connection:
                 connection.close()
+             
+     
+    def update_user(self, uid,two_factor, email, acc_type):
+        """Update user information in the created_users table."""
+        connection = self.get_connection()
+        if not connection:
+            return False
+
+        query = """
+        UPDATE created_users 
+        SET two_factor = %s, email = %s, acc_type = %s
+        WHERE uid = %s
+        """
+        params = (two_factor, email, acc_type, uid)
+
+        try:
+            cursor = connection.cursor()
+            cursor.execute(query, params)
+            connection.commit()
+            return True
+        except Error as e:
+            print(f"❌ Error updating user: {e}")
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()      
                 
     def save_user(self, uid, password, two_factor, email, pass_mail, acc_type):
         """Insert a new user into the created_users table."""
