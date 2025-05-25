@@ -1958,7 +1958,10 @@ class EmulatorView:
         em.wait(1)
         em.tap(73.3,214.0)
         em.wait(1)
-        em.send_text(33)
+        
+        #random number from 18 to 38
+        year_random = random.randint(18, 38)
+        em.send_text(year_random)
         em.wait(1)
         
         self.update_device_status(device_id,"next")
