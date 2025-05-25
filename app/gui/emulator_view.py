@@ -801,7 +801,8 @@ class EmulatorView:
         em.wait_img("templates/lite/how_old_are_you.png")
         
         em.wait(1)
-        em.send_text(29)
+        random_year = random.randint(18, 48)
+        em.send_text(random_year)
         
         em.tap_img("templates/lite/next.png")
         self.update_device_status(device_id,"Next")
@@ -2930,7 +2931,6 @@ class EmulatorView:
         self.update_device_status(device_id,"Data Saved")
         em.wait(2)
         
-
     def register_gmail_account(self, device_id):
         """Registers a new Facebook account using ADB commands."""
         print(f"📲 Registering Gmail on {device_id}...")
