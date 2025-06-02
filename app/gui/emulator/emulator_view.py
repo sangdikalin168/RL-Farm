@@ -909,6 +909,10 @@ class EmulatorView:
             em.tap_img("templates/lite/email_textbox.png")
             
             em.wait(1)
+            if self.selected_reg_type.get() == "wait_mail":
+                self.update_device_status(device_id,"Please Input Your Email")
+                em.wait(99999)
+                
             em.send_text(alias_email)
             self.update_device_status(device_id,"next_email")
             em.tap_img("templates/lite/next_email.png")
@@ -920,6 +924,9 @@ class EmulatorView:
             em.tap_img("templates/lite/confirm_by_email.png")
             
             em.wait(2)
+            if self.selected_reg_type.get() == "wait_mail":
+                self.update_device_status(device_id,"Please Input Your Email")
+                em.wait(99999)
             em.send_text(alias_email)
             em.wait(1)
             em.tap_img("templates/lite/next.png")
