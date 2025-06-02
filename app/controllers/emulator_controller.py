@@ -136,6 +136,10 @@ class MuMuPlayerController:
     def get_all_emulator_status(self):
         """Optimized: Only connect ADB for running players."""
         emulator_data = {}
+        
+        #using adb kill-server
+        self.run_command([self.adb_path, "kill-server"])  # ✅ Ensure ADB server is killed before starting
+        self.run_command([self.adb_path, "start-server"])  # ✅ Start ADB server
 
         # ✅ Step 1: Get player list
         player_list = self.get_player_list()
