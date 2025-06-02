@@ -1,7 +1,7 @@
 import ttkbootstrap as ttkb
 from tkinter import Tk
-from app.gui.emulator_view import EmulatorView
-from app.gui.user_view import UserView
+from app.gui.emulator.emulator_view import EmulatorView
+from app.gui.user.user_view import UserView
 
 
 class MainWindow:
@@ -12,7 +12,7 @@ class MainWindow:
         self.db_service = db_service  # ✅ Store the database service
 
         # ✅ Initialize UI Sections
-        self.emulator_view = EmulatorView(self.master,self.db_service)
+        self.emulator_view = EmulatorView(self.master, self.db_service)
         self.user_view = UserView(self.master, self.db_service)
 
         # ✅ Configure Grid Layout
@@ -22,5 +22,6 @@ class MainWindow:
 
 if __name__ == "__main__":
     root = Tk()
-    app = MainWindow(root)
+    db_service = None  # Placeholder - replace with actual DB service later
+    app = MainWindow(root,db_service)
     root.mainloop()

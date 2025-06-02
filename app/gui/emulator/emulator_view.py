@@ -1,3 +1,4 @@
+#emulator_view
 import random
 import shutil
 import string
@@ -278,6 +279,9 @@ class EmulatorView:
         
         self.type_novery_checkbox = ttkb.Radiobutton(reg_type_frame, text="No Very", variable=self.selected_reg_type, value="novery", style="primary.TRadiobutton")
         self.type_novery_checkbox.grid(row=0, column=1, sticky="w", padx=5)
+        
+        self.type_gmail_checkbox = ttkb.Radiobutton(reg_type_frame, text="Wait At Mail", variable=self.selected_reg_type, value="wait_mail", style="primary.TRadiobutton")
+        self.type_gmail_checkbox.grid(row=0, column=2, sticky="w", padx=5)
         
         
         
@@ -1244,6 +1248,9 @@ class EmulatorView:
         
         em.wait(1)
         
+        if self.selected_reg_type.get() == "wait_mail":
+            self.update_device_status(device_id,"Please Input Your Email")
+            em.wait(99999)
 
         em.send_text(alias_email)
     
