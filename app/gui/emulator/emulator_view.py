@@ -1,4 +1,5 @@
 #emulator_view
+import json
 import random
 import shutil
 import string
@@ -206,7 +207,7 @@ class EmulatorView:
         self.five_sim_checkbox = ttkb.Radiobutton(mode_selection_frame, text="5SIM", variable=self.selected_mail, value="five_sim", style="primary.TRadiobutton")
         self.five_sim_checkbox.grid(row=0, column=3, sticky="w", padx=5)
         
-        self.gmail_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Gmail", variable=self.selected_mail, value="gmail", style="primary.TRadiobutton")
+        self.gmail_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Gmail Loop", variable=self.selected_mail, value="gmail", style="primary.TRadiobutton")
         self.gmail_checkbox.grid(row=0, column=4, sticky="w", padx=5)
 
         # --- 5SIM Cascading Selections ---
@@ -409,23 +410,81 @@ class EmulatorView:
             self.fivesim_options_frame.grid_remove()  # Hide the extra options
 
     def load_players(self):
-        """Fetch player list and update TreeView efficiently."""
-        self.emulator_tree.delete(*self.emulator_tree.get_children())  # ✅ Clear existing rows
-        self.selected_emulators = {}  # ✅ Reset selection dictionary
+        """Fetch player list and update TreeView with optimized performance and JSON parsing."""
+        try:
+            # Clear existing data
+            self.emulator_tree.delete(*self.emulator_tree.get_children())
+            self.selected_emulators = {}
 
-        emulator_data = self.emulator.get_all_emulator_status()  # ✅ Get all emulator data
+            # Get emulator data with progress feedback
+            self._show_loading_progress()
+            emulator_data = self.emulator.get_all_emulator_status()
+            self._hide_loading_progress()
 
-        if not emulator_data:
-            self.emulator_tree.insert("", "end", values=("", "No Players Found", "", ""))
-            return
+            if not emulator_data:
+                self.emulator_tree.insert("", "end", values=("☐", "0", "No Players Found", "Not Running"))
+                return
 
-        for idx, (player_index, data) in enumerate(emulator_data.items(), start=0):
-            device_id = data["device_id"] if data["device_id"] else "Not Available"
-            status = data["status"]
+            # Process and sort players
+            sorted_players = sorted(emulator_data.items(), key=lambda x: x[0])
+            for idx, (player_index, data) in enumerate(sorted_players, start=1):
+                status = data.get("status", "Unknown")
+                
+                # Parse device_id (handling both JSON and direct port cases)
+                raw_device = data.get("device_id")
+                device_display = "Not Available"
+                
+                if raw_device and "adb_port" in str(raw_device):
+                    try:
+                        if isinstance(raw_device, str):
+                            port_info = json.loads(raw_device)
+                        else:
+                            port_info = raw_device
+                        device_display = f"127.0.0.1:{port_info.get('adb_port', '?')}"
+                    except (json.JSONDecodeError, AttributeError) as e:
+                        print(f"⚠️ Error parsing device info for player {player_index}: {e}")
+                        device_display = "Invalid Format"
+                elif raw_device:
+                    device_display = str(raw_device)
 
-            # ✅ Insert into TreeView and store the item_id as a key
-            item_id = self.emulator_tree.insert("", "end", values=("☐", idx, device_id, status))
-            self.selected_emulators[item_id] = False  # ✅ Store item_id as a dictionary key
+                # Insert into treeview with status-based coloring
+                item_id = self.emulator_tree.insert(
+                    "", "end", 
+                    values=("☐", str(idx), device_display, status),
+                    tags=(status.lower().replace(" ", "_"),)
+                )
+                self.selected_emulators[item_id] = False
+
+
+
+        except Exception as e:
+            self._hide_loading_progress()
+            print(f"⛔ Error loading players: {e}")
+            self.emulator_tree.insert("", "end", 
+                values=("☐", "0", "Error Loading Data", "Error"),
+                tags=("error",)
+            )
+
+    def _show_loading_progress(self):
+        """Show loading progress indicator."""
+        self.loading_window = ttkb.Toplevel(self.master)
+        self.loading_window.title("Loading Emulators")
+        self.loading_window.geometry("300x80")
+        self.loading_window.resizable(False, False)
+        
+        ttkb.Label(self.loading_window, text="Scanning for emulators...").pack(pady=10)
+        self.loading_progress = ttkb.Progressbar(
+            self.loading_window, 
+            orient="horizontal", 
+            mode="indeterminate"
+        )
+        self.loading_progress.pack(fill="x", padx=20)
+        self.loading_progress.start()
+
+    def _hide_loading_progress(self):
+        """Hide loading progress indicator."""
+        if hasattr(self, 'loading_window'):
+            self.loading_window.destroy()
 
     def on_mouse_click(self, event):
         """Handle mouse click events"""
@@ -540,40 +599,71 @@ class EmulatorView:
         self.select_all_button.config(text="Unselect All" if new_state else "Select All")
 
     def start_selected_players(self):
-        """Start MuMuPlayer for all checked players, but skip already running ones."""
-        selected_players = set()  # Use a set to prevent duplicates
+        """Start MuMuPlayer for all checked players, with enhanced status handling."""
+        selected_players = set()
+        running_players = set()
+        invalid_players = set()
 
-        # Loop through all rows in the TreeView
+        # First pass: Collect all selected players and check their statuses
         for item_id in self.emulator_tree.get_children():
+            if not self.selected_emulators.get(item_id, False):
+                continue  # Skip unchecked items
+                
             values = self.emulator_tree.item(item_id, "values")
-            checkbox_state = values[0]  # "☑" or "☐"
-            display_no = int(values[1])  # "No" column; assuming it’s already the correct index
-            status = values[3]  # Status column ("Running" or not)
+            try:
+                player_index = int(values[1])  # "No" column
+                status = values[3]  # Status column
+                
+                print(f"🔍 Checking player {player_index} with status '{status}'")
+                
+                if status == "Running":
+                    running_players.add(player_index)
+                else:
+                    selected_players.add(player_index)
+            except (ValueError, IndexError):
+                invalid_players.add(item_id)
 
-            # Only add if the checkbox is checked and the emulator is not running
-            if checkbox_state == "☑" and status != "Running":
-                actual_index = display_no  # Use the number directly without subtracting 1
-                selected_players.add(actual_index)
-
-        if not selected_players:
-            messagebox.showwarning("Selection Error", "No players selected or all are already running!")
-            return
-
-        # Start selected emulators in parallel
-        with ThreadPoolExecutor(max_workers=30) as executor:
-            results = list(executor.map(self.emulator.start_emulator, selected_players))
+        # Show appropriate warnings
+        messages = []
+        if not selected_players and not running_players:
+            messages.append("No valid players selected!")
+        if running_players:
+            messages.append(f"Skipped {len(running_players)} already running players")
+        if invalid_players:
+            messages.append(f"Skipped {len(invalid_players)} invalid players")
         
-        # Refresh emulator list after starting
-        self.master.after(2000, self.load_players)
+        if messages:
+            messagebox.showwarning("Selection Info", "\n".join(messages))
+            if not selected_players:
+                return
 
-    def _get_treeview_item_by_no(self, no):
-        """Find the TreeView item ID using the 'No' column."""
-        for item_id in self.emulator_tree.get_children():
-            values = self.emulator_tree.item(item_id, "values")
-            if int(values[1]) == no:
-                return item_id
-        return None  # ✅ Return None if not found
+        # Start selected emulators with progress feedback
+        self._show_starting_progress(len(selected_players))
 
+    def _show_starting_progress(self, count):
+        """Show progress for emulator startup."""
+        if hasattr(self, 'progress_window'):
+            self.progress_window.destroy()
+            
+        self.progress_window = ttkb.Toplevel(self.master)
+        self.progress_window.title("Starting Emulators")
+        self.progress_window.geometry("300x100")
+        self.progress_window.resizable(False, False)
+        
+        ttkb.Label(
+            self.progress_window, 
+            text=f"Starting {count} emulator{'s' if count > 1 else ''}..."
+        ).pack(pady=10)
+        
+        self.progress_bar = ttkb.Progressbar(
+            self.progress_window, 
+            orient="horizontal", 
+            length=250, 
+            mode="indeterminate"
+        )
+        self.progress_bar.pack()
+        self.progress_bar.start()
+    
     def stop_selected_players(self):
         """Stop all selected emulators concurrently."""
         selected_players = []
@@ -685,8 +775,9 @@ class EmulatorView:
 
         """Start Facebook registration on selected emulators in parallel, ensuring UI remains responsive."""
         
-        #If Wait At Mail is selected num_rounds is set to 1
-        if self.selected_reg_type.get() == "wait_mail":
+        
+        #If Gmail is selected, set num_rounds to 1
+        if self.selected_mail.get() == "gmail":
             num_rounds = 1
         else:
             num_rounds = 9999  # ✅ Number of registration rounds per emulator
@@ -733,27 +824,60 @@ class EmulatorView:
         self.running = False
         print("⏹️ Registration process stopped!")  
 
-    def get_selected_devices(self):
+    def get_selected_devices(self, show_warnings=True):
         """
-        ✅ Retrieves selected emulator devices from the GUI’s emulator_tree.
-
+        Retrieves selected emulator devices from the GUI's emulator_tree with enhanced validation.
+        
+        Args:
+            show_warnings (bool): Whether to show warning messages (default: True)
+        
         Returns:
-            list: A list of selected device IDs.
+            list: A list of selected and valid device IDs, or None if error occurs
         """
         selected_devices = []
+        invalid_devices = []
+        available_count = 0
         
-        for item_id in self.emulator_tree.get_children():
-            values = self.emulator_tree.item(item_id, "values")
-            checkbox_state = values[0]  # First column is checkbox state
-            device_id = values[2]  # Device ID column
+        try:
+            # First get all device IDs that are checked
+            for item_id in self.emulator_tree.get_children():
+                if not self.selected_emulators.get(item_id, False):
+                    continue  # Skip unchecked items
+                    
+                try:
+                    values = self.emulator_tree.item(item_id, "values")
+                    
+                    
+                    device_id = str(values[1]).strip()  # Device ID column
+                    status = str(values[2]).strip() if len(values) > 1 else ""
+                    
+                    
+                    if not device_id or status == "Not Available":
+                        invalid_devices.append(f"Row {self.emulator_tree.index(item_id)+1}")
+                    else:
+                        selected_devices.append(
+                            status
+                        )
+                        available_count += 1
+                        
+                except (IndexError, ValueError, AttributeError) as e:
+                    invalid_devices.append(f"Row {self.emulator_tree.index(item_id)+1}")
+                    if show_warnings:
+                        print(f"⚠️ Error processing row: {e}")
 
-            if checkbox_state == "☑" and device_id != "Not Available":
-                selected_devices.append(device_id)
+            # Show warnings if requested
+            if show_warnings:
+                if invalid_devices:
+                    print(f"⚠️ Skipped {len(invalid_devices)} invalid devices: {', '.join(invalid_devices)}")
+                if not available_count:
+                    print("⚠️ No valid emulators selected!")
+                    
+            return selected_devices if available_count else None
 
-        if not selected_devices:
-            print("⚠️ No emulators selected!")
-
-        return selected_devices
+        except Exception as e:
+            if show_warnings:
+                print(f"⛔ Critical error getting devices: {e}")
+            return None
 
     def update_device_status(self, device_id, status):
         """Update the status column of a device in the TreeView, ensuring UI updates occur in the main thread."""
@@ -1965,7 +2089,7 @@ class EmulatorView:
         
         five_sim_api.finish_number(activation_id)
         em.wait(2)
-      
+
     def register_five_sim_lite(self, device_id, selected_package):
         em = ADBController(device_id)
         
@@ -2465,8 +2589,7 @@ class EmulatorView:
         em.clear_facebook_data()
         
         em.open_app(selected_package)
-        
-        credentials = self.get_email_credentials()
+    
         
         self.update_device_status(device_id,"Waiting Meta Logo")
         meta_logo = em.wait_img("templates/katana/meta_logo.png")
