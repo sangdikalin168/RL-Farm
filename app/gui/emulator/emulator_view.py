@@ -351,8 +351,6 @@ class EmulatorView:
         self.emulator_tree.bind("<B1-Motion>", self.on_mouse_drag, add="+")
         self.emulator_tree.bind("<ButtonRelease-1>", self.on_mouse_release, add="+")
 
-
-
     def country_selection_changed(self, *args):
         selected_country = self.selected_country.get()
         operators = self.country_operator_mapping.get(selected_country, [])
@@ -686,7 +684,13 @@ class EmulatorView:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
         """Start Facebook registration on selected emulators in parallel, ensuring UI remains responsive."""
-        num_rounds = 9999  # ✅ Number of registration rounds per emulator
+        
+        #If Wait At Mail is selected num_rounds is set to 1
+        if self.selected_reg_type.get() == "wait_mail":
+            num_rounds = 1
+        else:
+            num_rounds = 9999  # ✅ Number of registration rounds per emulator
+            
         selected_devices = self.get_selected_devices()
 
         if not selected_devices:
