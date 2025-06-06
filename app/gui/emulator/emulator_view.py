@@ -128,7 +128,6 @@ class EmulatorView:
         emulator_frame.grid_columnconfigure(5, weight=0)  # Scrollbar column
                 
 
-
         def resource_path(relative_path):
             try:
                 # PyInstaller stores temp files here
@@ -307,7 +306,8 @@ class EmulatorView:
             emulator_frame,
             columns=("Select", "No", "Device", "Status"),
             show="headings",
-            height=15 
+            height=15,
+            selectmode="extended"  # Allows drag selection + Ctrl/Shift click
         )
 
         # ✅ Set Column Headings
@@ -336,7 +336,22 @@ class EmulatorView:
 
         # ✅ Load players on startup & Bind checkbox toggle function
         self.load_players()
-        self.emulator_tree.bind("<ButtonRelease-1>", self.toggle_checkbox)
+
+        # Track drag state
+        self.drag_state = {
+            'start_item': None,
+            'start_index': None,
+            'last_index': None,
+            'direction': None,  # 'up' or 'down'
+            'initial_selection': None  # Store initial checkbox states
+        }
+        
+        # Bind mouse events
+        self.emulator_tree.bind("<Button-1>", self.on_mouse_click, add="+")
+        self.emulator_tree.bind("<B1-Motion>", self.on_mouse_drag, add="+")
+        self.emulator_tree.bind("<ButtonRelease-1>", self.on_mouse_release, add="+")
+
+
 
     def country_selection_changed(self, *args):
         selected_country = self.selected_country.get()
@@ -414,39 +429,117 @@ class EmulatorView:
             item_id = self.emulator_tree.insert("", "end", values=("☐", idx, device_id, status))
             self.selected_emulators[item_id] = False  # ✅ Store item_id as a dictionary key
 
-    def toggle_checkbox(self, event):
-        """Toggle checkbox state when a user clicks on the 'Select' column."""
-        item_id = self.emulator_tree.identify_row(event.y)
-        column = self.emulator_tree.identify_column(event.x)
+    def on_mouse_click(self, event):
+        """Handle mouse click events"""
+        col = self.emulator_tree.identify_column(event.x)
+        row = self.emulator_tree.identify_row(event.y)
+        
+        if row:  # If clicked on a row
+            if col == "#1":  # Checkbox column
+                # Toggle checkbox
+                current_value = self.selected_emulators.get(row, False)
+                self.selected_emulators[row] = not current_value
+                self.update_checkbox_display()
+                return "break"  # Prevent treeview selection
+            else:
+                # Initialize drag state
+                self.drag_state = {
+                    'start_item': row,
+                    'start_index': self.emulator_tree.index(row),
+                    'last_index': self.emulator_tree.index(row),
+                    'direction': None,
+                    'initial_selection': dict(self.selected_emulators)  # Save current state
+                }
+                return None
+        
+    def on_mouse_drag(self, event):
+        """Handle mouse drag with directional selection"""
+        row = self.emulator_tree.identify_row(event.y)
+        
+        if not row or not self.drag_state['start_item']:
+            return
+        
+        current_index = self.emulator_tree.index(row)
+        last_index = self.drag_state['last_index']
+        
+        # Skip if we're on the same row
+        if current_index == last_index:
+            return
+        
+        # Determine direction (first movement)
+        if self.drag_state['direction'] is None:
+            if current_index > last_index:
+                self.drag_state['direction'] = 'down'
+            else:
+                self.drag_state['direction'] = 'up'
+        
+        # Update last index
+        self.drag_state['last_index'] = current_index
+        
+        # Get range of items to process
+        start_idx = self.drag_state['start_index']
+        end_idx = current_index
+        
+        # Process each item in the range
+        children = self.emulator_tree.get_children()
+        for idx in range(min(start_idx, end_idx), max(start_idx, end_idx) + 1):
+            item_id = children[idx]
+            
+            # Apply selection based on direction
+            if self.drag_state['direction'] == 'down':
+                self.selected_emulators[item_id] = True  # Select
+            else:
+                self.selected_emulators[item_id] = False  # Unselect
+        
+        self.update_checkbox_display()
 
-        if column == "#1" and item_id:  # ✅ Check if click is in checkbox column
-            current_values = self.emulator_tree.item(item_id, "values")
-            checkbox_state = current_values[0]  # ✅ Get current checkbox state
-            # ✅ Toggle checkbox state
-            new_checkbox = "☑" if checkbox_state == "☐" else "☐"
-            self.emulator_tree.item(item_id, values=(new_checkbox,) + current_values[1:])
+    def on_mouse_release(self, event):
+        """Handle mouse release and cleanup"""
+        # Check if we had an active drag operation
+        if self.drag_state['start_item']:
+            # Optional: Add any final processing here
+            pass
+        
+        # Reset drag state
+        self.drag_state = {
+            'start_item': None,
+            'start_index': None,
+            'last_index': None,
+            'direction': None,
+            'initial_selection': None
+        }
 
-            # ✅ Track selected emulators properly
-            self.selected_emulators[item_id] = (new_checkbox == "☑")
-
-            # ✅ Update "Select All" button dynamically
-            all_selected = all(self.selected_emulators.values())  # ✅ Check if all are selected
-            self.select_all_button.config(text="Unselect All" if all_selected else "Select All")
+    def update_checkbox_display(self):
+        """Update the visual state of checkboxes and row backgrounds"""
+        for item_id in self.emulator_tree.get_children():
+            checked = self.selected_emulators.get(item_id, False)
+            value = "☐"
+            if checked:
+                value = "✔"
+            
+            self.emulator_tree.set(item_id, "Select", value)
+            self.emulator_tree.item(item_id, tags=("checked" if checked else "unchecked",))
+        
+        # Configure tag styles
+        self.emulator_tree.tag_configure("checked", background="#d1e7dd")  # light green
 
     def toggle_select_all(self):
         """Toggle between selecting and unselecting all checkboxes in the TreeView."""
-        all_selected = all(self.selected_emulators.values())  # ✅ Check if all are selected
-
-        new_checkbox = "☐" if all_selected else "☑"  # ✅ Toggle state
-
-        # ✅ Apply new state to all rows
+        # Check if all are currently selected (more efficient than checking all values)
+        all_selected = all(self.selected_emulators.values()) if self.selected_emulators else False
+        
+        # Determine new state (invert current "all selected" state)
+        new_state = not all_selected
+        
+        # Update all checkboxes and selection states
         for item_id in self.emulator_tree.get_children():
-            current_values = self.emulator_tree.item(item_id, "values")
-            self.emulator_tree.item(item_id, values=(new_checkbox,) + current_values[1:])
-            self.selected_emulators[item_id] = (new_checkbox == "☑")
-
-        # ✅ Update button text dynamically
-        self.select_all_button.config(text="Unselect All" if new_checkbox == "☑" else "Select All")
+            self.selected_emulators[item_id] = new_state
+        
+        # Update visual display (this will handle both checkboxes and row coloring)
+        self.update_checkbox_display()
+        
+        # Update button text
+        self.select_all_button.config(text="Unselect All" if new_state else "Select All")
 
     def start_selected_players(self):
         """Start MuMuPlayer for all checked players, but skip already running ones."""
