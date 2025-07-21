@@ -3,7 +3,7 @@ from app.services.mysql_service import MySQLService
 import ttkbootstrap as ttkb
 from dotenv import load_dotenv
 
-def center_window(window, width=1800, height=900):
+def center_window(window, width=470, height=700):
     """Center the application window on the screen."""
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # ✅ Use ttkbootstrap's `Window` (Better UI theme support)
     app = ttkb.Window(themename="darkly")
     app.title("RL Farm")
-    app.geometry("400x400")
+    app.geometry("200x400")
     app.resizable(True, True)
 
     center_window(app)  # ✅ Center the window

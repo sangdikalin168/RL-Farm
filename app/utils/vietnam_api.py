@@ -4,7 +4,7 @@ import time
 import sys
 import codecs
 
-sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer)
+# sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer)
 
 
 # Polling settings

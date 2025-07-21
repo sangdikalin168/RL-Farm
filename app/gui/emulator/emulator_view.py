@@ -41,7 +41,7 @@ class EmailCredentials:
     pass_mail: str
 
 class EmulatorView:
-    def __init__(self, master,db_service):
+    def __init__(self, master, db_service):
         self.master = master
         self.db_service = db_service
         self.emulator = MuMuPlayerController(self)  # ✅ Pass `self` (MainWindow) as a reference to EmulatorController
@@ -578,7 +578,7 @@ class EmulatorView:
             self.emulator_tree.item(item_id, tags=("checked" if checked else "unchecked",))
         
         # Configure tag styles
-        self.emulator_tree.tag_configure("checked", background="#d1e7dd")  # light green
+        self.emulator_tree.tag_configure("checked")  # light green
 
     def toggle_select_all(self):
         """Toggle between selecting and unselecting all checkboxes in the TreeView."""
@@ -762,16 +762,41 @@ class EmulatorView:
             executor.submit(self.emulator.arrange_windows)  # ✅ Arrange all windows concurrently
     
     def start_register_action(self):
-        #delete all files in folder screenshots
-        for filename in os.listdir("screenshots"):
-            file_path = os.path.join("screenshots", filename)
+        # Determine the base path for the 'screenshots' folder
+        if getattr(sys, 'frozen', False):
+            # Running as a PyInstaller executable
+            # The 'screenshots' folder will be extracted to sys._MEIPASS
+            screenshots_base_path = os.path.join(sys._MEIPASS, "screenshots")
+        else:
+            # Running as a normal Python script (development mode)
+            # Assumes 'screenshots' folder is in the same directory as your main script
+            screenshots_base_path = "screenshots" # Or os.path.join(os.getcwd(), "screenshots")
+
+        # Ensure the screenshots directory exists.
+        # It's good practice to create it if it doesn't, especially for development or if
+        # it's a place where the app saves dynamic files.
+        # If 'screenshots' is meant to be a user-writable directory (e.g., for saving emulator screenshots),
+        # consider placing it in a user-specific data directory, not bundled with the app.
+        # For now, we'll assume it's for temporary files related to the app's execution.
+        if not os.path.exists(screenshots_base_path):
+            os.makedirs(screenshots_base_path, exist_ok=True)
+            print(f"Created screenshots directory: {screenshots_base_path}")
+            # If the directory just got created, it's empty, so no need to list/delete
+            return # Exit if it was just created, as there's nothing to delete.
+
+        # Delete all files in the 'screenshots' folder
+        print(f"Clearing contents of: {screenshots_base_path}")
+        for filename in os.listdir(screenshots_base_path): # Use the corrected path
+            file_path = os.path.join(screenshots_base_path, filename) # Use the corrected path for joining
             try:
                 if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
+                    os.unlink(file_path) # Remove file or link
+                    print(f"Deleted file: {file_path}")
                 elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
+                    shutil.rmtree(file_path) # Remove directory and its contents
+                    print(f"Deleted directory: {file_path}")
             except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
+                print(f'Failed to delete {file_path}. Reason: {e}')
 
         """Start Facebook registration on selected emulators in parallel, ensuring UI remains responsive."""
         
@@ -917,7 +942,6 @@ class EmulatorView:
         
         em = ADBController(device_id)  # ✅ Initialize ADBController for the device
         
-        em.randomize_device_fingerprint()
         em.run_adb_command(["shell", "pm", "clear", "com.facebook.lite"])
         
         em.open_app(selected_package)  # ✅ Open Facebook Lite app
@@ -1247,50 +1271,42 @@ class EmulatorView:
         
         self.update_device_status(device_id,"Waiting Meta Logo")
         meta_logo = em.wait_img("templates/katana/meta_logo.png")
+        
+        self.update_device_status(device_id,"Meta Logo Found")
 
         if( meta_logo == False):
             self.update_device_status(device_id,"Meta Logo Not Found")
             em.wait(10)
             return
         
-        login_templates = em.detect_templates([
+        self.update_device_status(device_id,"Waiting Login Step")
+        
+        em.tap_imgs([
             "templates/katana/login_step/create_new_account.png",
-            "templates/katana/login_step/join_facebook.png",
-            "templates/katana/login_step/sign_up.png",
-            "templates/katana/login_step/create_new_account_blue.png",
-            "templates/katana/login_step/get_started.png"
-        ],timeout=120)
+            "templates/katana/login_step/create_new_account1.png",
+            "templates/katana/login_step/get_started.png",
+        ])
         
-        
-        login_img = [
-            "templates/katana/login_step/create_new_account.png",
-            "templates/katana/login_step/join_facebook.png",
-            "templates/katana/login_step/sign_up.png",
-            "templates/katana/login_step/create_new_account_blue.png"
-        ]
-        
-        if "create_new_account.png" in login_templates or "join_facebook.png" in login_templates or "sign_up.png" in login_templates:
-            self.update_device_status(device_id,"Create Account Btn Found")
-            em.wait(2)
-            em.tap_imgs(login_img)
-        
-        if "create_new_account_blue.png" in login_templates:
-            self.update_device_status(device_id,"Create New Account Blue")
-            em.tap_img("templates/katana/login_step/create_new_account_blue.png")
-        
-        if "get_started.png" in login_templates:
-            self.update_device_status(device_id,"Get Started")
-            em.tap_img("templates/katana/get_started.png")
+        self.update_device_status(device_id,"Create New Account")
 
         
-        detect_last_name_or_get_started = em.detect_templates(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png","templates/katana/last_name.png"])
+        detect_last_name_or_get_started = em.detect_templates([
+            "templates/katana/get_started.png",
+            "templates/katana/no_create_account.png",
+            "templates/katana/create_new_account.png",
+            "templates/katana/last_name.png"
+        ])
         
         self.update_device_status(device_id,"Input Last Name or Get Started")
         if 'last_name.png' in detect_last_name_or_get_started:
             self.update_device_status(device_id,"Input Last Name")
         else:
             self.update_device_status(device_id,"Get Started")
-            em.tap_imgs(["templates/katana/get_started.png","templates/katana/no_create_account.png","templates/katana/create_new_account.png"])
+            em.tap_imgs([
+                "templates/katana/get_started.png",
+                "templates/katana/no_create_account.png",
+                "templates/katana/create_new_account.png"
+            ])
         
 
         first_name, last_name, phone_number, password, alias_email, main_email, pass_mail = generate_info(provider=self.selected_mail.get()).values()
@@ -1372,7 +1388,11 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         
         
-        detected_sign_up = em.detect_templates(["templates/katana/what_is_your_email.png", "templates/katana/mobile_number.png","templates/katana/mobile_number_cursor.png"])
+        detected_sign_up = em.detect_templates([
+            "templates/katana/what_is_your_email.png", 
+            "templates/katana/mobile_number.png",
+            "templates/katana/mobile_number_cursor.png"
+        ])
         
         if "what_is_your_email.png" in detected_sign_up:
             self.update_device_status(device_id, "Sign Up With Email")
@@ -1411,8 +1431,6 @@ class EmulatorView:
         self.update_device_status(device_id,"next")
         em.tap_img("templates/katana/next.png")
         
-        self.update_device_status(device_id,"save")
-        em.tap_img("templates/katana/save.png")
         
         self.update_device_status(device_id,"Detect Logged Account")
         detect_logged_as = em.detect_templates(["templates/katana/logged_as.png","templates/katana/agree.png"])
@@ -1434,6 +1452,7 @@ class EmulatorView:
                 "templates/katana/make_sure.png",
                 "templates/katana/before_send.png",
                 "templates/katana/appeal.png",
+                "templates/katana/account_locked.png",
             ]
         )
         skip_idont_get_code = False
@@ -1441,6 +1460,10 @@ class EmulatorView:
         self.update_device_status(device_id,"Detect Spam")
         if "cannot_create_account.png" in detected_t1 or "we_need_more_info.png" in detected_t1 or "appeal.png" in detected_t1:
             self.update_device_status(device_id,"Spam Device")
+            return
+        
+        if "account_locked.png" in detected_t1:
+            self.update_device_status(device_id,"Account Locked")
             return
         
         if "make_sure.png" in detected_t1:

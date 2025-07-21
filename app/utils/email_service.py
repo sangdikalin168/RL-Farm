@@ -4,7 +4,7 @@ import re
 from email.header import decode_header
 
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
+# sys.stdout.reconfigure(encoding='utf-8')
 
 
 def get_email_body(msg):

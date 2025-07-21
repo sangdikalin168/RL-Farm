@@ -13,7 +13,7 @@ class MainWindow:
 
         # ✅ Initialize UI Sections
         self.emulator_view = EmulatorView(self.master, self.db_service)
-        self.user_view = UserView(self.master, self.db_service)
+        # self.user_view = UserView(self.master, self.db_service)
 
         # ✅ Configure Grid Layout
         self.master.grid_rowconfigure(0, weight=1)

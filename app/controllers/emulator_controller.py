@@ -1,3 +1,4 @@
+# app/controllers/emulator_controller.py
 import json
 import os
 import random
@@ -6,10 +7,10 @@ import sys
 import re
 from tkinter import messagebox
 
-# Fix for PyInstaller EXE: Ensure stdout and stderr are always available
 if getattr(sys, 'frozen', False):  # Running as EXE
-    sys.stdout = open(os.devnull, 'w')
-    sys.stderr = open(os.devnull, 'w')
+    #sys.stdout = open(os.devnull, 'w', buffering=1)
+    #sys.stderr = open(os.devnull, 'w', buffering=1)
+    pass
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -22,20 +23,23 @@ class MuMuPlayerController:
         self.mumu_path = self.find_mumu_path()
         self.vms_path = os.path.join(self.mumu_path, "vms")
         self.mumu_manager_path = os.path.join(self.mumu_path, "shell", "MuMuManager.exe")
-        self.adb_path = os.path.join(os.getcwd(), "adb", "adb.exe")
+        if getattr(sys, 'frozen', False): # Check if running as a PyInstaller executable
+            self.adb_path = os.path.join(sys._MEIPASS, "adb", "adb.exe")
+        else:
+            self.adb_path = os.path.join(os.getcwd(), "adb", "adb.exe")
         self.device_id = "127.0.0.1:16416"  # ✅ Default ADB port for the first emulator  # Example: "127.0.0.1:16384"
 
     def find_mumu_path(self):
-        """Find MuMuPlayer installation path dynamically."""
         possible_paths = [
-            r"C:\\Program Files\\Netease\\MuMuPlayerGlobal-12.0",
-            r"D:\\Program Files\\Netease\\MuMuPlayerGlobal-12.0"
+            r"C:\Program Files\Netease\MuMuPlayerGlobal-12.0",
+            r"D:\Program Files\Netease\MuMuPlayerGlobal-12.0"
         ]
         for path in possible_paths:
             if os.path.exists(path):
+                print(f"✅ Found MuMuPath: {path}")
                 return path
         messagebox.showerror("Error", "MuMuPlayer installation not found!")
-        # sys.exit("❌ MuMuPlayer installation not found!")
+        return ""  # Ensure fallback
 
     def run_command(self, command):
         """Execute a command and return its output as a string."""
