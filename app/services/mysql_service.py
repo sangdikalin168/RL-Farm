@@ -21,10 +21,10 @@ class MySQLService:
     def _initialize(self):
         """Initialize the MySQL connection config."""
         self.db_config = {
-            "host": "localhost",
+            "host": "203.176.133.252",
             "user": "admin",
             "password": "admin@MHG168",
-            "database": "test",
+            "database": "facebook_register",
             "charset": "utf8mb4",
             "cursorclass": pymysql.cursors.Cursor,
             "autocommit": False

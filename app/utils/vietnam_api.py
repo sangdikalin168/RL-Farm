@@ -1,12 +1,6 @@
 import requests
 import time
 
-import sys
-import codecs
-
-# sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer)
-
-
 # Polling settings
 MAX_RETRIES = 15
 POLL_INTERVAL = 5
