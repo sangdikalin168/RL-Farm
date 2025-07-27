@@ -26,7 +26,7 @@ import tkinter as tk
 from app.utils.email_service import get_domain_confirm_code, get_domain_confirm_email
 from app.utils.five_sim import FiveSimAPI
 from app.utils.five_sim_generate import five_sim_generate_info
-from app.utils.gmail_api import get_order, get_otp
+from app.utils.gmail_api import GmailAPI
 from app.utils.user_generator import generate_info
 from app.utils.vietnam_api import get_otp_stp, rent_gmail
 from app.utils.zoho import get_confirmation_code
@@ -51,6 +51,10 @@ class EmulatorView:
         self.selected_reg_type = tk.StringVar(value="full")  
         self.two_factor_checked = tk.StringVar(value="false")  # Default to "false" (No 2FA)
         self.reg_gmail = False
+
+        # Device-specific Gmail API data storage
+        # Format: {device_id: {"gmail": "email@gmail.com", "order_id": "abc123"}}
+        self.gmail_api = {}
 
         
         self.email_password_mapping = {
@@ -207,7 +211,7 @@ class EmulatorView:
         self.five_sim_checkbox = ttkb.Radiobutton(mode_selection_frame, text="5SIM", variable=self.selected_mail, value="five_sim", style="primary.TRadiobutton")
         self.five_sim_checkbox.grid(row=0, column=3, sticky="w", padx=5)
         
-        self.gmail_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Gmail Loop", variable=self.selected_mail, value="gmail", style="primary.TRadiobutton")
+        self.gmail_checkbox = ttkb.Radiobutton(mode_selection_frame, text="Gmail", variable=self.selected_mail, value="gmail", style="primary.TRadiobutton")
         self.gmail_checkbox.grid(row=0, column=4, sticky="w", padx=5)
 
         # --- 5SIM Cascading Selections ---
@@ -402,6 +406,44 @@ class EmulatorView:
             return None
         return self.api_mapping.get(selected_api)
 
+    def get_device_gmail_data(self, device_id: str) -> dict:
+        """
+        Get Gmail API data for a specific device.
+        
+        Args:
+            device_id (str): The device identifier
+            
+        Returns:
+            dict: {"gmail": "email@gmail.com", "order_id": "abc123"} or empty dict
+        """
+        return self.gmail_api.get(device_id, {"gmail": "", "order_id": ""})
+    
+    def set_device_gmail_data(self, device_id: str, gmail: str = None, order_id: str = None):
+        """
+        Set Gmail API data for a specific device.
+        
+        Args:
+            device_id (str): The device identifier
+            gmail (str, optional): Gmail address from API
+            order_id (str, optional): Order ID from Gmail API
+        """
+        if device_id not in self.gmail_api:
+            self.gmail_api[device_id] = {"gmail": "", "order_id": ""}
+        
+        if gmail is not None:
+            self.gmail_api[device_id]["gmail"] = gmail
+            print(f"📧 Set Gmail for {device_id}: {gmail}")
+        
+        if order_id is not None:
+            self.gmail_api[device_id]["order_id"] = order_id
+            print(f"🆔 Set Order ID for {device_id}: {order_id}")
+    
+    def clear_device_gmail_data(self, device_id: str):
+        """Clear Gmail API data for a specific device."""
+        if device_id in self.gmail_api:
+            self.gmail_api[device_id] = {"gmail": "", "order_id": ""}
+            print(f"🗑️ Cleared Gmail API data for {device_id}")
+
     def mail_selection_changed(self, *args):
         """Show the cascading 5SIM dropdowns when 'five_sim' is selected, hide otherwise."""
         if self.selected_mail.get() == "five_sim":
@@ -454,8 +496,7 @@ class EmulatorView:
                     tags=(status.lower().replace(" ", "_"),)
                 )
                 self.selected_emulators[item_id] = False
-
-
+                
 
         except Exception as e:
             self._hide_loading_progress()
@@ -800,12 +841,8 @@ class EmulatorView:
 
         """Start Facebook registration on selected emulators in parallel, ensuring UI remains responsive."""
         
-        
-        #If Gmail is selected, set num_rounds to 1
-        if self.selected_mail.get() == "gmail":
-            num_rounds = 1
-        else:
-            num_rounds = 9999  # ✅ Number of registration rounds per emulator
+    
+        num_rounds = 9999  # ✅ Number of registration rounds per emulator
             
         selected_devices = self.get_selected_devices()
 
@@ -1252,18 +1289,7 @@ class EmulatorView:
         
     def register_katana(self, device_id, selected_package):
         
-        # if self.selected_mail.get() == "five_sim":
-        #     print("Five Sim Mode")
-        #     self.register_five_sim(device_id,selected_package)
-        #     return
-        # if self.selected_mail.get() == "gmail":
-        #     print("Gmail Mode")
-        #     self.register_gmail(device_id,selected_package)
-        #     return
-
-        # If Five Sim and Gmail are not selected, proceed with normal registration
         em = ADBController(device_id)
-        
         
         em.clear_facebook_data()
         
@@ -1511,7 +1537,31 @@ class EmulatorView:
             self.update_device_status(device_id,"Please Input Your Email")
             em.wait(99999)
 
-        em.send_text(alias_email)
+        if self.selected_mail.get() == "gmail":
+            print("Gmail Mode")
+            # Initialize device-specific Gmail data if not exists
+            if device_id not in self.gmail_api:
+                self.gmail_api[device_id] = {"gmail": "", "order_id": ""}
+            
+            # Create Gmail order if not already created for this device
+            if self.gmail_api[device_id]["gmail"] == "":
+                from app.utils.gmail_api import GmailAPI
+                gmail_service = GmailAPI()
+                order_data = gmail_service.create_order()
+                if order_data:
+                    print(f"Created order for {device_id} - Email: {order_data['email']}, Order ID: {order_data['order_id']}")
+                    self.gmail_api[device_id]["gmail"] = order_data['email']
+                    self.gmail_api[device_id]["order_id"] = order_data['order_id']
+                    self.update_device_status(device_id, f"Gmail: {order_data['email']}")
+                else:
+                    self.update_device_status(device_id, "Failed to create Gmail order")
+                    return
+            
+            # Use device-specific Gmail
+            em.send_text(self.gmail_api[device_id]["gmail"])
+        else:
+            print("Zoho Mode")
+            em.send_text(alias_email)
     
         em.wait(1)
         
@@ -1519,46 +1569,177 @@ class EmulatorView:
         
         
         verify_code_count = 0
-        while True:
-            if self.selected_mail.get() == 'custom':
-                code = get_domain_confirm_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)
-            else:
-                code = get_confirmation_code(provider=self.selected_mail.get(), primary_email=main_email, alias_email=alias_email, password=pass_mail)  
-                  
-            verify_code_count += 1
+        confirm_code = 0
+        if self.selected_mail.get() == "gmail":
+            # Use device-specific Gmail API service and order ID
+            from app.utils.gmail_api import GmailAPI
+            gmail_service = GmailAPI()
             
-            if(verify_code_count == 20):
-                return
-            if str(code).isnumeric():
-                print("Code Received: "+ code)
-                break
-            self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
-            em.wait(1)
+            device_order_id = self.gmail_api[device_id]["order_id"]
+            device_gmail = self.gmail_api[device_id]["gmail"]
+            
+            while True:
+                otp = gmail_service.get_otp(device_order_id)
+                if otp and otp.isdigit():
+                    print(f"OTP for device {device_id} (order {device_order_id}): {otp}")
+                    confirm_code = otp
+                    break
+                else:
+                    print(f"Failed to retrieve OTP for device {device_id}")
+                verify_code_count += 1
+                if verify_code_count == 60: 
+                    self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
+                    return
+                self.update_device_status(device_id,f"Waiting Gmail OTP: {verify_code_count}/60")
+                em.wait(1)
+                
+        else:
+            while True:
+                if self.selected_mail.get() == 'custom':
+                    code = get_domain_confirm_code(primary_email=main_email, alias_email=alias_email, password=pass_mail)
+                else:
+                    code = get_confirmation_code(provider=self.selected_mail.get(), primary_email=main_email, alias_email=alias_email, password=pass_mail)  
+                    
+                verify_code_count += 1
+                
+                if(verify_code_count == 20):
+                    return
+                if str(code).isnumeric():
+                    print("Code Received: "+ code)
+                    confirm_code = code
+                    break
+                self.update_device_status(device_id,f"Waiting Verify Code: {verify_code_count}")
+                em.wait(1)
 
-        em.send_text(code)
+        em.send_text(confirm_code)
         
         em.tap_img("templates/katana/next.png")
         
         self.update_device_status(device_id,"skip_add_profile")
         em.tap_img("templates/katana/skip_add_profile.png")
         
+        em.wait(8)
+        
         self.update_device_status(device_id,"Goto Personal Info")
-        em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
+
+        
+        if self.selected_mail.get() == "gmail": 
+            em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/personal_info/contact_points"])
+            detect_appeal1 = em.detect_templates(["templates/katana/appeal.png", "templates/katana/something_wrong.png"],timeout=30)
+            if "appeal.png" in detect_appeal1 or "something_wrong.png" in detect_appeal1:
+                self.update_device_status(device_id,"appeal")
+                em.wait(3)
+                # Clear Gmail data for this specific device
+                if device_id in self.gmail_api:
+                    self.gmail_api[device_id]["gmail"] = ""
+                    self.gmail_api[device_id]["order_id"] = ""
+                    print(f"Cleared Gmail data for device {device_id} due to appeal")
+                return
+            
+            self.update_device_status(device_id,"Getting UID")
+            uid = em.extract_facebook_uid()
+            self.update_device_status(device_id,uid)
+            em.wait(2)
+            
+            self.update_device_status(device_id,"Data Saved")
+            self.update_device_status(device_id,"Add New Contact")
+            em.tap_img("templates/katana/add_new_contact.png")
+            
+            self.update_device_status(device_id,"Add Email")
+            em.tap_img("templates/katana/add_email.png")
+            
+            self.update_device_status(device_id,"profile_checkbox")
+            em.tap_img("templates/katana/profile_checkbox.png")
+            
+            self.update_device_status(device_id,"enter_email")
+            em.tap_img("templates/katana/enter_email.png")
+            em.wait(1)  
+            
+            info = five_sim_generate_info("eth168@zohomail.com")
+            em.send_text(info[3])  # Send the email address
+            
+            em.wait(1)    
+            
+            self.update_device_status(device_id,"next_add_email")
+            em.tap_img("templates/katana/next_add_email.png")  
+            
+            self.update_device_status(device_id,"Getting Confirmation Code")  
+            confirm_code_count = 0
+            while True:
+                confirm_code = zoho_api_get_security_code(info[3])
+                confirm_code_count += 1
+                if(confirm_code_count == 30):
+                    return
+                if str(confirm_code).isnumeric():
+                    print("Code Received: "+ confirm_code)
+                    break
+                self.update_device_status(device_id,f"Waiting Verify Code: {confirm_code_count}")
+                em.wait(2)
+                
+            em.tap_img("templates/katana/enter_confirmation_code.png")
+            em.wait(1)
+            em.send_text(confirm_code)
+            em.wait(1)  
+            
+            self.update_device_status(device_id,"next_add_email")
+            em.tap_img("templates/katana/next_add_email.png")
+            
+            self.update_device_status(device_id,"close_add_mail")
+            em.tap_img("templates/katana/close_add_mail.png")
+            
+            
+            self.update_device_status(device_id,"contact_info")
+            em.tap_img("templates/katana/contact_info.png")
+            em.wait(1)
+            
+            self.update_device_status(device_id,"Click Gmail")
+            em.tap_img("templates/katana/gmail.png")
+            em.wait(1)
+            
+            self.update_device_status(device_id,"delete_email")
+            em.tap_img("templates/katana/delete_email.png")
+            em.wait(1)
+            
+            self.update_device_status(device_id,"confirm_delete_email")
+            em.tap_img("templates/katana/confirm_delete_email.png")
+            
     
-        detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
-        if "appeal.png" in detect_appeal1:
-            self.update_device_status(device_id,"appeal")
+            self.update_device_status(device_id,"close_add_mail")
+            em.tap_img("templates/katana/close_add_mail.png")
+            
+            self.update_device_status(device_id,"phone_img")
+            em.tap_img("templates/katana/phone_img.png")
+            
+            
+            self.update_device_status(device_id,"delete_number")
+            em.tap_img("templates/katana/delete_number.png")
+            
+            self.update_device_status(device_id,"confirm_delete_number")
+            em.tap_img("templates/katana/confirm_delete_number.png")
+            
+            self.db_service.save_user(uid=uid, password=password, two_factor="", email=info[3], pass_mail=pass_mail, acc_type="No 2FA")
+            self.update_device_status(device_id,"Data Saved")
+            
+            em.wait_img("templates/katana/close_add_mail.png", timeout=20)
+            
             em.wait(3)
-            return
-        
-        
-        self.update_device_status(device_id,"Getting UID")
-        uid = em.extract_facebook_uid()
-        self.update_device_status(device_id,uid)
-        em.wait(2)
-        
-        self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="No 2FA")
-        self.update_device_status(device_id,"Data Saved")
+        else:
+            em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
+            
+            detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
+            if "appeal.png" in detect_appeal1:
+                self.update_device_status(device_id,"appeal")
+                em.wait(3)
+                return
+            
+            
+            self.update_device_status(device_id,"Getting UID")
+            uid = em.extract_facebook_uid()
+            self.update_device_status(device_id,uid)
+            em.wait(2)
+            
+            self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="No 2FA")
+            self.update_device_status(device_id,"Data Saved")
         
     def register_five_sim(self, device_id, selected_package):
         em = ADBController(device_id)

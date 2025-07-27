@@ -22,3 +22,6 @@ def five_sim_generate_info(main_email):
     return first_name, last_name, password, email
 
 
+if __name__ == "__main__":
+    info = five_sim_generate_info("eth168@zohomail.com")
+    print(info[3])
