@@ -53,7 +53,7 @@ class EmulatorView:
         self.reg_gmail = False
 
         # Device-specific Gmail API data storage
-        # Format: {device_id: {"gmail": "email@gmail.com", "order_id": "abc123"}}
+        # Format: {device_id: {"gmail": "email@gmail.com", "order_id": "abc123", "otp": 0, "reg_count": 0}}
         self.gmail_api = {}
 
         
@@ -414,11 +414,11 @@ class EmulatorView:
             device_id (str): The device identifier
             
         Returns:
-            dict: {"gmail": "email@gmail.com", "order_id": "abc123"} or empty dict
+            dict: {"gmail": "email@gmail.com", "order_id": "abc123", "otp": 0, "reg_count": 0} or empty dict
         """
-        return self.gmail_api.get(device_id, {"gmail": "", "order_id": ""})
-    
-    def set_device_gmail_data(self, device_id: str, gmail: str = None, order_id: str = None):
+        return self.gmail_api.get(device_id, {"gmail": "", "order_id": "", "otp": 0, "reg_count": 0})
+
+    def set_device_gmail_data(self, device_id: str, gmail: str = None, order_id: str = None, otp: int = None, reg_count: int = None):
         """
         Set Gmail API data for a specific device.
         
@@ -426,9 +426,11 @@ class EmulatorView:
             device_id (str): The device identifier
             gmail (str, optional): Gmail address from API
             order_id (str, optional): Order ID from Gmail API
+            otp (int, optional): OTP code from Gmail API
+            reg_count (int, optional): Registration count for the device
         """
         if device_id not in self.gmail_api:
-            self.gmail_api[device_id] = {"gmail": "", "order_id": ""}
+            self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": 0, "reg_count": 0}
         
         if gmail is not None:
             self.gmail_api[device_id]["gmail"] = gmail
@@ -437,11 +439,19 @@ class EmulatorView:
         if order_id is not None:
             self.gmail_api[device_id]["order_id"] = order_id
             print(f"🆔 Set Order ID for {device_id}: {order_id}")
-    
+
+        if otp is not None:
+            self.gmail_api[device_id]["otp"] = otp
+            print(f"🔑 Set OTP for {device_id}: {otp}")
+
+        if reg_count is not None:
+            self.gmail_api[device_id]["reg_count"] = reg_count
+            print(f"🔄 Set Registration Count for {device_id}: {reg_count}")
+
     def clear_device_gmail_data(self, device_id: str):
         """Clear Gmail API data for a specific device."""
         if device_id in self.gmail_api:
-            self.gmail_api[device_id] = {"gmail": "", "order_id": ""}
+            self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": 0, "reg_count": 0}
             print(f"🗑️ Cleared Gmail API data for {device_id}")
 
     def mail_selection_changed(self, *args):
@@ -1288,7 +1298,8 @@ class EmulatorView:
         em.wait(2)
         
     def register_katana(self, device_id, selected_package):
-        
+
+
         em = ADBController(device_id)
         
         em.clear_facebook_data()
@@ -1410,6 +1421,7 @@ class EmulatorView:
         self.update_device_status(device_id,"next")
         em.tap_img("templates/katana/next.png")
         
+        em.wait(2)
         self.update_device_status(device_id,"Select Gender")
         em.tap_img("templates/katana/male.png")
         
@@ -1541,17 +1553,19 @@ class EmulatorView:
             print("Gmail Mode")
             # Initialize device-specific Gmail data if not exists
             if device_id not in self.gmail_api:
-                self.gmail_api[device_id] = {"gmail": "", "order_id": ""}
+                self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": 0, "reg_count": 0}
             
             # Create Gmail order if not already created for this device
-            if self.gmail_api[device_id]["gmail"] == "":
+            if self.gmail_api[device_id]["gmail"] == "" or self.gmail_api[device_id]["reg_count"] == 2:
                 from app.utils.gmail_api import GmailAPI
                 gmail_service = GmailAPI()
                 order_data = gmail_service.create_order()
                 if order_data:
                     print(f"Created order for {device_id} - Email: {order_data['email']}, Order ID: {order_data['order_id']}")
-                    self.gmail_api[device_id]["gmail"] = order_data['email']
-                    self.gmail_api[device_id]["order_id"] = order_data['order_id']
+                    self.set_device_gmail_data(device_id, 
+                                             gmail=order_data['email'], 
+                                             order_id=order_data['order_id'], 
+                                             reg_count=self.gmail_api[device_id]["reg_count"] + 1)
                     self.update_device_status(device_id, f"Gmail: {order_data['email']}")
                 else:
                     self.update_device_status(device_id, "Failed to create Gmail order")
@@ -1581,9 +1595,14 @@ class EmulatorView:
             while True:
                 otp = gmail_service.get_otp(device_order_id)
                 if otp and otp.isdigit():
-                    print(f"OTP for device {device_id} (order {device_order_id}): {otp}")
-                    confirm_code = otp
-                    break
+                    # If Old OTP
+                    if otp == str(self.gmail_api[device_id]["otp"]):
+                        print("Old OTP Received, Retrying...")
+                    else: 
+                        print(f"OTP for device {device_id} (order {device_order_id}): {otp}")
+                        confirm_code = otp
+                        self.set_device_gmail_data(device_id, otp=int(otp))
+                        break
                 else:
                     print(f"Failed to retrieve OTP for device {device_id}")
                 verify_code_count += 1
@@ -1625,15 +1644,16 @@ class EmulatorView:
         
         if self.selected_mail.get() == "gmail": 
             em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/personal_info/contact_points"])
-            detect_appeal1 = em.detect_templates(["templates/katana/appeal.png", "templates/katana/something_wrong.png"],timeout=30)
-            if "appeal.png" in detect_appeal1 or "something_wrong.png" in detect_appeal1:
+            detect_appeal1 = em.detect_templates([
+                "templates/katana/appeal.png", 
+                "templates/katana/something_wrong.png", 
+                "templates/katana/i_dont_get_code.png"
+                ],timeout=30)
+            if "appeal.png" in detect_appeal1 or "something_wrong.png" in detect_appeal1 or "i_dont_get_code.png" in detect_appeal1:
                 self.update_device_status(device_id,"appeal")
-                em.wait(3)
+                em.wait(300)
                 # Clear Gmail data for this specific device
-                if device_id in self.gmail_api:
-                    self.gmail_api[device_id]["gmail"] = ""
-                    self.gmail_api[device_id]["order_id"] = ""
-                    print(f"Cleared Gmail data for device {device_id} due to appeal")
+                self.clear_device_gmail_data(device_id)
                 return
             
             self.update_device_status(device_id,"Getting UID")
@@ -1693,8 +1713,9 @@ class EmulatorView:
             em.wait(1)
             
             self.update_device_status(device_id,"Click Gmail")
-            em.tap_img("templates/katana/gmail.png")
+            em.wait_img("templates/katana/mail_img.png")
             em.wait(1)
+            em.tap(375.7,529.4)
             
             self.update_device_status(device_id,"delete_email")
             em.tap_img("templates/katana/delete_email.png")
@@ -1717,19 +1738,73 @@ class EmulatorView:
             self.update_device_status(device_id,"confirm_delete_number")
             em.tap_img("templates/katana/confirm_delete_number.png")
             
-            self.db_service.save_user(uid=uid, password=password, two_factor="", email=info[3], pass_mail=pass_mail, acc_type="No 2FA")
-            self.update_device_status(device_id,"Data Saved")
+ 
             
             em.wait_img("templates/katana/close_add_mail.png", timeout=20)
             
             em.wait(3)
+            
+            self.update_device_status(device_id,"Go To Two Factor")
+            em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
+            
+            self.update_device_status(device_id,"arrow_icon")
+            em.tap_img("templates/katana/arrow_icon.png")
+            
+            self.update_device_status(device_id,"Enter Password")
+            em.tap_img("templates/katana/password_at_2fa.png")
+            em.wait(2)
+            em.send_text(password)
+            em.tap_img("templates/katana/continue.png")
+            
+            em.wait(2)
+            em.tap_img("templates/katana/continue.png")
+            
+            em.wait(5)
+            self.update_device_status(device_id,"Swipe to 2FA")
+            em.swipe(460.5,825.4,472.4,416.2, 1000)
+            
+            while True:
+                clipboard_2fa = em.image_to_2fa()
+                if clipboard_2fa is not None:
+                    break
+                self.update_device_status(device_id,f"2FA Key: {clipboard_2fa}")
+            
+            em.wait(2)
+            em.tap_img("templates/katana/next.png")
+            
+            
+            self.update_device_status(device_id,"Waiting 2FA Code")
+            two_factor_code_count = 0
+            while True:
+                self.update_device_status(device_id,f"Waiting 2FA Code:{two_factor_code_count}s")
+                two_factor_code = self.get_2fa_code(clipboard_2fa)
+                two_factor_code_count += 1
+                if str(two_factor_code).isnumeric():
+                    self.update_device_status(device_id, f"2FA Code Received {two_factor_code}")
+                    print("Code Received: "+ two_factor_code)
+                    break
+                if(two_factor_code_count == 30):
+                    return
+                em.wait(1)
+            
+            em.tap_img("templates/katana/enter_two_factor_code.png")
+            em.wait(1)
+            em.send_text(two_factor_code)
+            em.wait(1)
+            em.tap_img("templates/katana/next.png")
+            
+  
+            em.wait_img("templates/katana/two_factor_is_on.png", timeout=20)
+            
+            self.db_service.save_user(uid=uid, password=password, two_factor=clipboard_2fa, email=info[3], pass_mail=pass_mail, acc_type="2FA")
+            self.update_device_status(device_id,"Data Saved")
         else:
             em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
             
             detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
             if "appeal.png" in detect_appeal1:
                 self.update_device_status(device_id,"appeal")
-                em.wait(3)
+                em.wait(300)
                 return
             
             

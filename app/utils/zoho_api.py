@@ -105,12 +105,30 @@ def zoho_api_get_security_code(recipient_email):
         print(f"Found {len(matched_emails)} email(s) matching the recipient email.")
         
         for email in matched_emails:
-            print(email['subject'])
+
+            print(email)
             subject = email.get('subject', '')
             subject_match = re.search(r'\b(\d{6,8})\b\s*(?:is\s+)?(?:your\s+)?(?:code|security code|verification code|to confirm this email)', subject, re.IGNORECASE)
             if subject_match:
                 code = subject_match.group(1)
                 print(f"Confirmation code found in subject: {code}")
+
+                # Attempt to delete the message
+                try:
+                    message_id = email['messageId']
+                    delete_message(accountId, folderId, message_id)
+                    print(f"Message {message_id} deleted successfully.")
+                except Exception as e:
+                    print(f"Failed to delete message {message_id}: {e}")
+                
+                return code
+            
+            # Fallback to extracting from the summary
+            summary = email.get('summary', '')
+            summary_match = re.search(r"confirmation code:\s*(\d{6})", summary, re.IGNORECASE)
+            if summary_match:
+                code = summary_match.group(1)
+                print(f"Confirmation code found in summary: {code}")
 
                 # Attempt to delete the message
                 try:
@@ -201,4 +219,4 @@ def zoho_api_get_confirmation_code(recipient_email):
         return None
 
 
-# zoho_api_get_security_code("eth168+jeffreymerritt8uc2@zohomail.com")
+# zoho_api_get_security_code("eth168+garyross5grz@zohomail.com")
