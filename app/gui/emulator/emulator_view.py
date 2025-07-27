@@ -1252,16 +1252,16 @@ class EmulatorView:
         
     def register_katana(self, device_id, selected_package):
         
-        if self.selected_mail.get() == "five_sim":
-            print("Five Sim Mode")
-            self.register_five_sim(device_id,selected_package)
-            return
-        if self.selected_mail.get() == "gmail":
-            print("Gmail Mode")
-            self.register_gmail(device_id,selected_package)
-            return
+        # if self.selected_mail.get() == "five_sim":
+        #     print("Five Sim Mode")
+        #     self.register_five_sim(device_id,selected_package)
+        #     return
+        # if self.selected_mail.get() == "gmail":
+        #     print("Gmail Mode")
+        #     self.register_gmail(device_id,selected_package)
+        #     return
 
-                
+        # If Five Sim and Gmail are not selected, proceed with normal registration
         em = ADBController(device_id)
         
         
@@ -1281,13 +1281,16 @@ class EmulatorView:
         
         self.update_device_status(device_id,"Waiting Login Step")
         
+        em.wait(3)
+        
         em.tap_imgs([
             "templates/katana/login_step/create_new_account.png",
             "templates/katana/login_step/create_new_account1.png",
+            "templates/katana/login_step/create_new_account2.png",
             "templates/katana/login_step/get_started.png",
         ])
         
-        self.update_device_status(device_id,"Create New Account")
+        self.update_device_status(device_id,"Clicked Create New Account")
 
         
         detect_last_name_or_get_started = em.detect_templates([
@@ -1389,8 +1392,8 @@ class EmulatorView:
         
         
         detected_sign_up = em.detect_templates([
-            "templates/katana/what_is_your_email.png", 
             "templates/katana/mobile_number.png",
+            "templates/katana/what_is_your_email.png",
             "templates/katana/mobile_number_cursor.png"
         ])
         
@@ -1432,12 +1435,17 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         
         
+        
         self.update_device_status(device_id,"Detect Logged Account")
-        detect_logged_as = em.detect_templates(["templates/katana/logged_as.png","templates/katana/agree.png"])
+        detect_logged_as = em.detect_templates(["templates/katana/logged_as.png","templates/katana/agree.png", "templates/katana/save_login_info.png"])
         if "logged_as.png" in detect_logged_as:
             self.update_device_status(device_id,"logged_as")
             em.wait(3)
             return
+        if "save_login_info.png" in detect_logged_as:
+            self.update_device_status(device_id,"save_login_info")
+            em.tap_img("templates/katana/save_login_info.png")
+            em.tap_img("templates/katana/agree.png")
         
         if 'agree.png' in detect_logged_as:
             self.update_device_status(device_id,"agree")
