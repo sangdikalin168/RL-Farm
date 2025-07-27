@@ -53,7 +53,7 @@ class EmulatorView:
         self.reg_gmail = False
 
         # Device-specific Gmail API data storage
-        # Format: {device_id: {"gmail": "email@gmail.com", "order_id": "abc123", "otp": 0, "reg_count": 0}}
+        # Format: {device_id: {"gmail": "email@gmail.com", "order_id": "abc123", "otp": "", "reg_count": 0}}
         self.gmail_api = {}
 
         
@@ -414,11 +414,11 @@ class EmulatorView:
             device_id (str): The device identifier
             
         Returns:
-            dict: {"gmail": "email@gmail.com", "order_id": "abc123", "otp": 0, "reg_count": 0} or empty dict
+            dict: {"gmail": "email@gmail.com", "order_id": "abc123", "otp": "", "reg_count": 0} or empty dict
         """
-        return self.gmail_api.get(device_id, {"gmail": "", "order_id": "", "otp": 0, "reg_count": 0})
+        return self.gmail_api.get(device_id, {"gmail": "", "order_id": "", "otp": "", "reg_count": 0})
 
-    def set_device_gmail_data(self, device_id: str, gmail: str = None, order_id: str = None, otp: int = None, reg_count: int = None):
+    def set_device_gmail_data(self, device_id: str, gmail: str = None, order_id: str = None, otp: str = None, reg_count: int = None):
         """
         Set Gmail API data for a specific device.
         
@@ -426,11 +426,11 @@ class EmulatorView:
             device_id (str): The device identifier
             gmail (str, optional): Gmail address from API
             order_id (str, optional): Order ID from Gmail API
-            otp (int, optional): OTP code from Gmail API
+            otp (str, optional): OTP code from Gmail API
             reg_count (int, optional): Registration count for the device
         """
         if device_id not in self.gmail_api:
-            self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": 0, "reg_count": 0}
+            self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": "", "reg_count": 0}
         
         if gmail is not None:
             self.gmail_api[device_id]["gmail"] = gmail
@@ -451,7 +451,7 @@ class EmulatorView:
     def clear_device_gmail_data(self, device_id: str):
         """Clear Gmail API data for a specific device."""
         if device_id in self.gmail_api:
-            self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": 0, "reg_count": 0}
+            self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": "", "reg_count": 0}
             print(f"🗑️ Cleared Gmail API data for {device_id}")
 
     def mail_selection_changed(self, *args):
@@ -1553,7 +1553,7 @@ class EmulatorView:
             print("Gmail Mode")
             # Initialize device-specific Gmail data if not exists
             if device_id not in self.gmail_api:
-                self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": 0, "reg_count": 0}
+                self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": "", "reg_count": 0}
             
             # Create Gmail order if not already created for this device
             if self.gmail_api[device_id]["gmail"] == "" or self.gmail_api[device_id]["reg_count"] == 2:
@@ -1596,12 +1596,12 @@ class EmulatorView:
                 otp = gmail_service.get_otp(device_order_id)
                 if otp and otp.isdigit():
                     # If Old OTP
-                    if otp == str(self.gmail_api[device_id]["otp"]):
+                    if otp == self.gmail_api[device_id]["otp"]:
                         print("Old OTP Received, Retrying...")
                     else: 
                         print(f"OTP for device {device_id} (order {device_order_id}): {otp}")
                         confirm_code = otp
-                        self.set_device_gmail_data(device_id, otp=int(otp))
+                        self.set_device_gmail_data(device_id, otp=otp)
                         break
                 else:
                     print(f"Failed to retrieve OTP for device {device_id}")
@@ -1632,6 +1632,8 @@ class EmulatorView:
 
         em.send_text(confirm_code)
         
+        
+        em.wait(3)
         em.tap_img("templates/katana/next.png")
         
         self.update_device_status(device_id,"skip_add_profile")
