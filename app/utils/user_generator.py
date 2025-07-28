@@ -244,7 +244,8 @@ yandex_domains = [
 ] 
 
 custom_domain = [
-    {"main_email": "jennahrubin69@gmail.com", "pass_mail": "vdme mtmz alnw rxuq", "domain_name": "rlfarm666.com"},
+    # {"main_email": "jennahrubin69@gmail.com", "pass_mail": "vdme mtmz alnw rxuq", "domain_name": "rlfarm666.com"},
+    {"main_email": "jennahrubin69@gmail.com", "pass_mail": "vdme mtmz alnw rxuq", "domain_name": "sangdikalin.org"},
 ]
 
 def generate_secure_password(length=12):
