@@ -1818,7 +1818,7 @@ class EmulatorView:
             detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
             if "appeal.png" in detect_appeal1:
                 self.update_device_status(device_id,"appeal")
-                em.wait(650)
+                em.wait(10)
                 return
             
             
