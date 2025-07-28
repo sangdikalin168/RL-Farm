@@ -1720,7 +1720,8 @@ class EmulatorView:
             
             self.update_device_status(device_id,"Click Gmail")
             em.wait_img("templates/katana/mail_img.png")
-            em.wait(1)
+            
+            em.wait(5)
             em.tap(375.7,529.4)
             
             self.update_device_status(device_id,"delete_email")
@@ -1801,7 +1802,7 @@ class EmulatorView:
             
             self.db_service.save_user(uid=uid, password=password, two_factor=clipboard_2fa, email=info[3], pass_mail=pass_mail, acc_type="2FA")
             self.update_device_status(device_id,"Data Saved")
-            em.wait(500)
+            em.wait(10)
         else:
             em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
             
