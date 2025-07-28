@@ -1560,6 +1560,7 @@ class EmulatorView:
                 from app.utils.gmail_api import GmailAPI
                 gmail_service = GmailAPI()
                 order_data = gmail_service.create_order()
+                print(order_data)
                 if order_data:
                     print(f"Created order for {device_id} - Email: {order_data['email']}, Order ID: {order_data['order_id']}")
                     self.set_device_gmail_data(device_id, 
@@ -1826,7 +1827,56 @@ class EmulatorView:
             self.update_device_status(device_id,uid)
             em.wait(2)
             
-            self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="No 2FA")
+            
+            self.update_device_status(device_id,"arrow_icon")
+            em.tap_img("templates/katana/arrow_icon.png")
+            
+            self.update_device_status(device_id,"Enter Password")
+            em.tap_img("templates/katana/password_at_2fa.png")
+            em.wait(2)
+            em.send_text(password)
+            em.tap_img("templates/katana/continue.png")
+            
+            em.wait(2)
+            em.tap_img("templates/katana/continue.png")
+            
+            em.wait(8)
+            self.update_device_status(device_id,"Swipe to 2FA")
+            em.swipe(460.5,825.4,472.4,416.2, 1000)
+            
+            while True:
+                clipboard_2fa = em.image_to_2fa()
+                if clipboard_2fa is not None:
+                    break
+                self.update_device_status(device_id,f"2FA Key: {clipboard_2fa}")
+            
+            em.wait(2)
+            em.tap_img("templates/katana/next.png")
+            
+            
+            self.update_device_status(device_id,"Waiting 2FA Code")
+            two_factor_code_count = 0
+            while True:
+                self.update_device_status(device_id,f"Waiting 2FA Code:{two_factor_code_count}s")
+                two_factor_code = self.get_2fa_code(clipboard_2fa)
+                two_factor_code_count += 1
+                if str(two_factor_code).isnumeric():
+                    self.update_device_status(device_id, f"2FA Code Received {two_factor_code}")
+                    print("Code Received: "+ two_factor_code)
+                    break
+                if(two_factor_code_count == 30):
+                    return
+                em.wait(1)
+            
+            em.tap_img("templates/katana/enter_two_factor_code.png")
+            em.wait(1)
+            em.send_text(two_factor_code)
+            em.wait(1)
+            em.tap_img("templates/katana/next.png")
+            
+            em.wait_img("templates/katana/two_factor_is_on.png", timeout=20)
+            
+            self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="2FA")
             self.update_device_status(device_id,"Data Saved")
             em.wait(10)
         

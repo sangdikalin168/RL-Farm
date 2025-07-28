@@ -1,3 +1,4 @@
+from time import sleep
 import requests
 from typing import Optional, Dict, Any
 
@@ -18,48 +19,78 @@ class GmailAPI:
         self.base_url = "https://yshshopmails.shop/v1/api"
     
     def create_order(self, service: str = "facebook") -> Optional[Dict[str, str]]:
-        """
-        Create a new email order
-        
-        Args:
-            service (str): Service type (default: "facebook")
-            
-        Returns:
-            Dict containing email and order_id, or None if failed
-        """
         url = f"{self.base_url}/create-order.php?key={self.api_key}&service={service}"
 
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            
-            # response from api
-            # {
-            #     "mail": "example@gmail.com",
-            #     "order_id": "abc123xyz"
-            # }
-            
-            email = data.get("mail")
-            order_id = data.get("order_id")
-            
-            if email and order_id:
-                result = {
-                    "email": email,
-                    "order_id": order_id
-                }
-                print(f"Email: {email}, Order ID: {order_id}")
-                return result
-            else:
-                print("Invalid response: missing email or order_id")
-                return None
+        time_out_second = 2000
+        total_time = 1
+        
+        while total_time < time_out_second:
+            try:
+                response = requests.post(
+                    f"https://yshshopmails.shop/v1/api/create-order.php?key={self.api_key}&service={service}",
+                    timeout=10
+                )
+                response.raise_for_status()
 
-        except requests.RequestException as e:
-            print(f"Request error in create_order: {e}")
-            return None
-        except Exception as e:
-            print(f"Error in create_order: {e}")
-            return None
+                data = response.json()
+                return data.get("mail"), data.get("order_id")
+
+            except requests.HTTPError as e:
+                status_code = e.response.status_code
+                if status_code == 502:
+                    raise Exception("Invalid API key.") from e
+                if 500 <= status_code <= 550:
+                    try:
+                        data = e.response.json()
+                        msg = data.get("error", e.response.text)
+                        print(f"API error {status_code}: {msg}")
+                    except ValueError:
+                        print(f"API error {status_code}: {e.response.text}")
+                else:
+                    print(f"Unexpected status code: {status_code}")
+                sleep(1)
+
+            except requests.RequestException as e:
+                print(f"Request error: {e}")
+                sleep(1)
+
+            total_time += 1
+
+        return None, None
+        
+        # try:
+        #     response = requests.get(url)
+        #     response.raise_for_status()
+        #     data = response.json()
+            
+        #     print(data)
+            
+        #     # response from api
+        #     # {
+        #     #     "mail": "example@gmail.com",
+        #     #     "order_id": "abc123xyz"
+        #     # }
+            
+        #     email = data.get("mail")
+        #     order_id = data.get("order_id")
+            
+        #     if email and order_id:
+        #         result = {
+        #             "email": email,
+        #             "order_id": order_id
+        #         }
+        #         print(f"Email: {email}, Order ID: {order_id}")
+        #         return result
+        #     else:
+        #         print("Invalid response: missing email or order_id")
+        #         return None
+
+        # except requests.RequestException as e:
+        #     print(f"Request error in create_order: {e}")
+        #     return None
+        # except Exception as e:
+        #     print(f"Error in create_order: {e}")
+        #     return None
 
     def get_otp(self, order_id: str) -> Optional[str]:
         """
@@ -137,18 +168,18 @@ if __name__ == "__main__":
     # Initialize the Gmail API service
     gmail_service = GmailAPI()
     
-    # # Example usage
-    # # Create order
-    # order_data = gmail_service.create_order()
-    # if order_data:
-    #     print(f"Created order - Email: {order_data['email']}, Order ID: {order_data['order_id']}")
+    # Example usage
+    # Create order
+    order_data = gmail_service.create_order()
+    if order_data:
+        print(f"Created order - Email: {order_data['email']}, Order ID: {order_data['order_id']}")
         
-    #     # Get OTP for the order
-    #     otp = gmail_service.get_otp(order_data['order_id'])
-    #     if otp:
-    #         print(f"OTP: {otp}")
-    #     else:
-    #         print("OTP not ready yet")
+        # Get OTP for the order
+        otp = gmail_service.get_otp(order_data['order_id'])
+        if otp:
+            print(f"OTP: {otp}")
+        else:
+            print("OTP not ready yet")
     
     # Test with existing order ID
     # order_id = "pyAwDH7TPmzZfgeg"
