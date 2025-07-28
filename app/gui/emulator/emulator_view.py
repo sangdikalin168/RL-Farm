@@ -1714,18 +1714,20 @@ class EmulatorView:
             em.tap_img("templates/katana/close_add_mail.png")
             
             
-            self.update_device_status(device_id,"contact_info")
-            em.tap_img("templates/katana/contact_info.png")
-            em.wait(1)
+            em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/personal_info/contact_points"])
             
-            self.update_device_status(device_id,"Click Gmail")
-            em.wait_img("templates/katana/mail_img.png")
+            # self.update_device_status(device_id,"contact_info")
+            # em.tap_img("templates/katana/contact_info.png")
+            # em.wait(1)
             
-            em.tap_img("templates/katana/close.png")
+            # self.update_device_status(device_id,"Click Gmail")
+            # em.wait_img("templates/katana/mail_img.png")
             
-            self.update_device_status(device_id,"contact_info")
-            em.tap_img("templates/katana/contact_info.png")
-            em.wait(1)
+            # em.tap_img("templates/katana/close.png")
+            
+            # self.update_device_status(device_id,"contact_info")
+            # em.tap_img("templates/katana/contact_info.png")
+            # em.wait(1)
             
             em.wait(3)
             em.tap(375.7,529.4)
