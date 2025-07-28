@@ -1721,7 +1721,13 @@ class EmulatorView:
             self.update_device_status(device_id,"Click Gmail")
             em.wait_img("templates/katana/mail_img.png")
             
-            em.wait(5)
+            em.tap_img("templates/katana/close.png")
+            
+            self.update_device_status(device_id,"contact_info")
+            em.tap_img("templates/katana/contact_info.png")
+            em.wait(1)
+            
+            em.wait(3)
             em.tap(375.7,529.4)
             
             self.update_device_status(device_id,"delete_email")
