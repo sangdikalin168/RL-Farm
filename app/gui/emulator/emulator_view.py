@@ -1649,14 +1649,18 @@ class EmulatorView:
             detect_appeal1 = em.detect_templates([
                 "templates/katana/appeal.png", 
                 "templates/katana/something_wrong.png", 
-                "templates/katana/i_dont_get_code.png"
+                "templates/katana/i_dont_get_code.png",
+                "templates/katana/add_new_contact.png"
                 ],timeout=30)
+            
             if "appeal.png" in detect_appeal1 or "something_wrong.png" in detect_appeal1 or "i_dont_get_code.png" in detect_appeal1:
                 self.update_device_status(device_id,"appeal")
                 em.wait(300)
                 # Clear Gmail data for this specific device
                 self.clear_device_gmail_data(device_id)
                 return
+            if "add_new_contact.png" in detect_appeal1:
+                self.update_device_status(device_id,"add_new_contact")
             
             self.update_device_status(device_id,"Getting UID")
             uid = em.extract_facebook_uid()
@@ -1739,9 +1743,7 @@ class EmulatorView:
             
             self.update_device_status(device_id,"confirm_delete_number")
             em.tap_img("templates/katana/confirm_delete_number.png")
-            
- 
-            
+        
             em.wait_img("templates/katana/close_add_mail.png", timeout=20)
             
             em.wait(3)
@@ -1761,7 +1763,7 @@ class EmulatorView:
             em.wait(2)
             em.tap_img("templates/katana/continue.png")
             
-            em.wait(5)
+            em.wait(8)
             self.update_device_status(device_id,"Swipe to 2FA")
             em.swipe(460.5,825.4,472.4,416.2, 1000)
             
@@ -1795,18 +1797,18 @@ class EmulatorView:
             em.wait(1)
             em.tap_img("templates/katana/next.png")
             
-  
             em.wait_img("templates/katana/two_factor_is_on.png", timeout=20)
             
             self.db_service.save_user(uid=uid, password=password, two_factor=clipboard_2fa, email=info[3], pass_mail=pass_mail, acc_type="2FA")
             self.update_device_status(device_id,"Data Saved")
+            em.wait(500)
         else:
             em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
             
             detect_appeal1 = em.detect_templates(["templates/katana/appeal.png"],timeout=20)
             if "appeal.png" in detect_appeal1:
                 self.update_device_status(device_id,"appeal")
-                em.wait(300)
+                em.wait(650)
                 return
             
             
@@ -1817,6 +1819,7 @@ class EmulatorView:
             
             self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="No 2FA")
             self.update_device_status(device_id,"Data Saved")
+            em.wait(10)
         
     def register_five_sim(self, device_id, selected_package):
         em = ADBController(device_id)
