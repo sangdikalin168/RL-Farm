@@ -1638,8 +1638,7 @@ class EmulatorView:
         em.tap_img("templates/katana/next.png")
         
         self.update_device_status(device_id,"skip_add_profile")
-        em.tap_img("templates/katana/skip_add_profile.png")
-        
+        em.tap_img("templates/katana/skip_add_profile.png",timeout=15)
         em.wait(8)
         
         self.update_device_status(device_id,"Goto Personal Info")
@@ -1716,21 +1715,10 @@ class EmulatorView:
             
             
             em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/personal_info/contact_points"])
+
             
-            # self.update_device_status(device_id,"contact_info")
-            # em.tap_img("templates/katana/contact_info.png")
-            # em.wait(1)
-            
-            # self.update_device_status(device_id,"Click Gmail")
-            # em.wait_img("templates/katana/mail_img.png")
-            
-            # em.tap_img("templates/katana/close.png")
-            
-            # self.update_device_status(device_id,"contact_info")
-            # em.tap_img("templates/katana/contact_info.png")
-            # em.wait(1)
-            
-            em.wait(3)
+            em.wait(5)
+            self.update_device_status(device_id,"Click Gmail")
             em.tap(375.7,529.4)
             
             self.update_device_status(device_id,"delete_email")
@@ -1743,18 +1731,6 @@ class EmulatorView:
     
             self.update_device_status(device_id,"close_add_mail")
             em.tap_img("templates/katana/close_add_mail.png")
-            
-            self.update_device_status(device_id,"phone_img")
-            em.tap_img("templates/katana/phone_img.png")
-            
-            
-            self.update_device_status(device_id,"delete_number")
-            em.tap_img("templates/katana/delete_number.png")
-            
-            self.update_device_status(device_id,"confirm_delete_number")
-            em.tap_img("templates/katana/confirm_delete_number.png")
-        
-            em.wait_img("templates/katana/close_add_mail.png", timeout=20)
             
             em.wait(3)
             
