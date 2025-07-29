@@ -7,8 +7,8 @@ class GmailAPI:
     """
     Gmail API service for creating email orders and retrieving OTPs
     """
-    
-    def __init__(self, api_key: str = "smfHyExkaKDKyDgJWW04yLycW5vbcwGn"):
+    #smfHyExkaKDKyDgJWW04yLycW5vbcwGn old api
+    def __init__(self, api_key: str = "9H3URZQ3k16eOgc8vXB1DhMavSYmwzwN"):
         """
         Initialize the Gmail API service
         

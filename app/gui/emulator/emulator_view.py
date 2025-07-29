@@ -1263,8 +1263,7 @@ class EmulatorView:
         self.update_device_status(device_id,"skip_turn_on_contact")
         em.tap_img("templates/lite/skip_turn_on_contact.png")
         
-        
-        
+    
         detect_wrong = em.detect_templates(
             [
                 "templates/lite/something_went_wrong.png",
@@ -1298,10 +1297,24 @@ class EmulatorView:
         em.wait(2)
         
     def register_katana(self, device_id, selected_package):
-
-
         em = ADBController(device_id)
         
+        em.clear_facebook_data()
+
+        #Open com.surfshark.vpnclient.android
+        em.run_adb_command(["shell", "monkey", "-p", "com.surfshark.vpnclient.android", "-c", "android.intent.category.LAUNCHER", "1"])
+        
+        self.update_device_status(device_id,"disconnect_vpn")
+        em.tap_img("templates/katana/disconnect_vpn.png")
+        
+        self.update_device_status(device_id,"connect_vpn")
+        em.tap_img("templates/katana/connect_vpn.png")
+
+        em.wait_img("templates/katana/vpn_connected.png",timeout=900)
+
+        random_wait_second = random.randint(5, 25)
+        em.wait(random_wait_second)
+
         em.clear_facebook_data()
         
         em.open_app(selected_package)
@@ -1582,7 +1595,16 @@ class EmulatorView:
         
         em.tap_img("templates/katana/next.png")
         
+        #Gmail is Exist
+        gmail_exist = em.detect_templates(["templates/katana/gmail_exist.png", "templates/katana/screen_confirm_code.png"])
         
+        if "gmail_exist.png" in gmail_exist:
+            self.update_device_status(device_id,"Gmail Exist, Reset Gmail Data")
+            self.gmail_api[device_id] = {"gmail": "", "order_id": "", "otp": "", "reg_count": 0}
+            return
+        if "screen_confirm_code.png" in gmail_exist:
+            self.update_device_status(device_id,"Screen Confirm Code")
+           
         verify_code_count = 0
         confirm_code = 0
         if self.selected_mail.get() == "gmail":
@@ -1648,14 +1670,15 @@ class EmulatorView:
             em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/personal_info/contact_points"])
             detect_appeal1 = em.detect_templates([
                 "templates/katana/appeal.png", 
+                "templates/katana/confirm_human.png",
                 "templates/katana/something_wrong.png", 
                 "templates/katana/i_dont_get_code.png",
                 "templates/katana/add_new_contact.png"
                 ],timeout=30)
             
-            if "appeal.png" in detect_appeal1 or "something_wrong.png" in detect_appeal1 or "i_dont_get_code.png" in detect_appeal1:
+            if "appeal.png" in detect_appeal1 or "something_wrong.png" in detect_appeal1 or "i_dont_get_code.png" in detect_appeal1 or "confirm_human.png" in detect_appeal1:
                 self.update_device_status(device_id,"appeal")
-                em.wait(300)
+                em.wait(120)
                 # Clear Gmail data for this specific device
                 self.clear_device_gmail_data(device_id)
                 return
@@ -1716,14 +1739,23 @@ class EmulatorView:
             
             em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/personal_info/contact_points"])
 
+            em.wait_img("templates/katana/mail_img.png")
             
-            em.wait(5)
+            em.wait(2)
             self.update_device_status(device_id,"Click Gmail")
-            em.tap(375.7,529.4)
+            em.tap(426.0,509.9)
             
+            confirm_mail_delete = em.detect_templates(["templates/katana/mail_img.png", "templates/katana/confirm_delete_email.png"],timeout=10)
+
+            if "mail_img.png" in confirm_mail_delete:
+                self.update_device_status(device_id,"Click Gmail Again")
+                em.tap(426.0,509.9)
+            if "confirm_delete_email.png" in confirm_mail_delete:
+                self.update_device_status(device_id,"Confirm Delete Email")
+                
+                
             self.update_device_status(device_id,"delete_email")
             em.tap_img("templates/katana/delete_email.png")
-            em.wait(1)
             
             self.update_device_status(device_id,"confirm_delete_email")
             em.tap_img("templates/katana/confirm_delete_email.png")
@@ -1737,16 +1769,19 @@ class EmulatorView:
             self.update_device_status(device_id,"Go To Two Factor")
             em.run_adb_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "fb://facewebmodal/f?href=https://accountscenter.facebook.com/password_and_security/two_factor"])
             
-            self.update_device_status(device_id,"arrow_icon")
-            em.tap_img("templates/katana/arrow_icon.png")
+            self.update_device_status(device_id,"Click Arrow Icon")
+            em.tap_imgs(["templates/katana/arrow_icon.png", "templates/katana/arrow_icon1.png"])
             
             self.update_device_status(device_id,"Enter Password")
             em.tap_img("templates/katana/password_at_2fa.png")
             em.wait(2)
             em.send_text(password)
+            
+            self.update_device_status(device_id,"Continue")
             em.tap_img("templates/katana/continue.png")
             
             em.wait(2)
+            self.update_device_status(device_id,"Continue")
             em.tap_img("templates/katana/continue.png")
             
             em.wait(8)
@@ -1855,6 +1890,10 @@ class EmulatorView:
             self.db_service.save_user(uid=uid, password=password, two_factor="", email=alias_email, pass_mail=pass_mail, acc_type="2FA")
             self.update_device_status(device_id,"Data Saved")
             em.wait(10)
+        
+        
+
+        
         
     def register_five_sim(self, device_id, selected_package):
         em = ADBController(device_id)

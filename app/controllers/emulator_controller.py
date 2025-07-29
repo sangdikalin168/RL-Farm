@@ -240,7 +240,7 @@ class MuMuPlayerController:
         self.run_command([self.mumu_manager_path, "setting", "-v", str(index), "set_window_pos", f"{x},{y},{width},{height}"])
 
     def arrange_windows(self):
-        GRID_COLS = 6
+        GRID_COLS = 8
         WINDOW_WIDTH = 220
         WINDOW_HEIGHT = 425
         WINDOW_GAP = 0  # Gap between windows
